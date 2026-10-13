@@ -35,6 +35,7 @@
     "test:foundation": "vitest run --project foundation",
     "test:phase2": "vitest run --project phase2",
     "test:phase3": "vitest run --project phase3",
+    "test:phase4": "vitest run --project phase4",
     "test:all": "vitest run",
     "test:bench": "tsx tests/bench/benchmark.ts",
     "clean": "rimraf dist",
