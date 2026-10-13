@@ -25,6 +25,9 @@ export interface PipelineOptions {
   includeCategories?: string[];  // filter to specific categories
   debug?: boolean;
   maxIterations?: number;
+  cache?: boolean;
+  sarif?: boolean;
+  suppressions?: boolean;
 }
 
 export interface PipelineResult {
@@ -32,4 +35,6 @@ export interface PipelineResult {
   findings: import('../rule-registry/types.js').RuleFinding[];
   totalFilesScanned: number;
   buildTimeMs: number;
+  sarifReport?: any;
+  cached?: boolean;
 }
