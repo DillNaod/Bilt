@@ -1,6 +1,7 @@
-// ─── Unified Bilt Project Model ───────────────────────────────────────────────
+// ─── Unified Bilt Project Model (L2) ─────────────────────────────────────────
 // Single discovery pass aggregating framework info, files, route map, components,
-// env, dependencies, design brief, and requirements into a single ProjectModel.
+// env, dependencies, design brief, entities, and requirements into a ProjectModel.
+// Rules only see this model through QueryFacade.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import fs from "node:fs/promises";
@@ -14,6 +15,101 @@ import { readDesignBrief } from "../design/brief/storage.js";
 import type { DesignBrief } from "../design/brief/types.js";
 import { loadRequirementsContract, type Requirement } from "../contract/requirements.js";
 import { MAX_FILE_SIZE } from "../readiness/cache.js";
+import type { Fact, Provenance } from "../facts/fact.js";
+import { confirmed, absent } from "../facts/fact.js";
+import type { CoverageReport } from "../facts/coverage.js";
+
+export type RouteId = string;
+export type ComponentId = string;
+
+export interface SymbolRef {
+  name: string;
+  file: string;
+  line?: number;
+  exported?: boolean;
+}
+
+export interface MiddlewareRef {
+  name: string;
+  ref?: SymbolRef;
+  dominatesEffects?: boolean;
+}
+
+export interface Edge<T> {
+  from: T;
+  to: T;
+  kind?: string;
+}
+
+export interface NormalizedTree {
+  signature: string;
+  depth: number;
+  nodes: number;
+}
+
+export interface FlowPath {
+  source: SymbolRef;
+  sink: SymbolRef;
+  steps: SymbolRef[];
+  complete: boolean;
+}
+
+export type SourceKind = "req.body" | "req.params" | "req.query" | "req.headers" | "webhook" | "file";
+export type SinkKind = "db.write" | "db.query" | "exec" | "eval" | "response" | "log";
+
+export interface ApiSecurityModel {
+  endpoint: ApiEndpointModel;
+  hasAuth: Fact<boolean>;
+  hasOwnershipCheck: Fact<boolean>;
+  hasInputValidation: Fact<boolean>;
+  passesBodyToDb: boolean;
+  sensitiveFieldsReturned: string[];
+}
+
+export interface ApiEndpointModel {
+  id: string;
+  method: string;
+  path: string;
+  file: string;
+  line: number;
+  framework?: string;
+  handler: SymbolRef;
+  isPublic: Fact<boolean>;
+  middlewareChain: Fact<MiddlewareRef[]>;
+  securityModel?: Fact<ApiSecurityModel>;
+}
+
+export interface ComponentModel {
+  id: ComponentId;
+  name: string;
+  file: string;
+  line: number;
+  isSection?: boolean;
+  isCard?: boolean;
+  isModal?: boolean;
+  isHero?: boolean;
+  isDataDisplay?: boolean;
+  hasLoadingState?: boolean;
+  hasErrorState?: boolean;
+  hasEmptyState?: boolean;
+  tree?: NormalizedTree;
+  decorativeSignals?: any[];
+  ctaTexts?: string[];
+  rawText?: string;
+}
+
+export interface EntityModel {
+  name: string;
+  file: string;
+  fields: { name: string; type: string; isSensitive?: boolean }[];
+  operations: { kind: "create" | "read" | "update" | "delete"; at: Provenance }[];
+}
+
+export interface ProductClaim {
+  text: string;
+  provenance: Provenance;
+  category: "metric" | "security" | "feature" | "social-proof";
+}
 
 export interface FileInfo {
   path: string;
@@ -32,6 +128,8 @@ export interface AuthModel {
   detected: boolean;
   providers: string[];
   hasMiddleware: boolean;
+  protectedRoutes?: string[];
+  publicRoutes?: string[];
 }
 
 export interface AuthorizationModel {
@@ -51,19 +149,72 @@ export interface EnvironmentModel {
   missingVarsCount: number;
 }
 
+export type ProductArchetype =
+  | "marketplace"
+  | "saas-dashboard"
+  | "editorial"
+  | "ecommerce"
+  | "internal-tool"
+  | "docs-site"
+  | "landing-only"
+  | "unclassified";
+
+export interface RouteModel {
+  id: RouteId;
+  path: string;
+  kind: "page" | "api" | "action" | "layout";
+  methods: string[];
+  handler: SymbolRef;
+  middlewareChain: Fact<MiddlewareRef[]>;
+  params: string[];
+  isPublic: Fact<boolean>;
+  source: Provenance;
+}
+
 export interface ProjectModel {
   rootDir: string;
   framework?: FrameworkInfo;
+  frameworks?: Fact<FrameworkInfo>[];
   files: FileInfo[];
   dependencies: DependencyInfo[];
-  routes: RouteMapEntry[];
+  routes: RouteModel[];
+  routeEntries?: RouteMapEntry[];
+  components: ComponentModel[];
+  componentGraph: Edge<ComponentId>[];
+  apiEndpoints: ApiEndpointModel[];
+  entities: EntityModel[];
+  claims: ProductClaim[];
   auth: AuthModel;
   authorization: AuthorizationModel;
   database: DatabaseModel;
   environment: EnvironmentModel;
   requirements: Requirement[];
   designBrief?: DesignBrief;
+  archetype: Fact<ProductArchetype>;
+  coverage: CoverageReport;
   timestamp: string;
+}
+
+function emptyCoverage(): CoverageReport {
+  return {
+    frameworks: [],
+    routes: { resolved: 0, unresolved: 0, unresolvedReasons: [] },
+    files: {
+      parsed: 0,
+      skipped: {
+        "too-large": 0,
+        binary: 0,
+        "symlink-escape": 0,
+        "depth-limit": 0,
+        "parse-timeout": 0,
+        ignored: 0,
+        "limit-reached": 0,
+      },
+      parseFailed: [],
+    },
+    dynamicConstructs: [],
+    rules: [],
+  };
 }
 
 /**
@@ -139,7 +290,22 @@ export async function buildProjectModel(rootDir: string): Promise<ProjectModel> 
   }
 
   // 3. Extract Route Map
-  const routes = await extractRouteMap(absoluteRoot, files);
+  const legacyRoutes = await extractRouteMap(absoluteRoot, files);
+  const routes: RouteModel[] = legacyRoutes.map((r) => {
+    const isApi = r.path.startsWith("/api");
+    const source: Provenance = { file: r.file, startLine: r.line || 1, endLine: r.line || 1 };
+    return {
+      id: `${r.method}:${r.path}`,
+      path: r.path,
+      kind: isApi ? "api" : "page",
+      methods: [r.method],
+      handler: { name: "handler", file: r.file, line: r.line || 1 },
+      middlewareChain: confirmed([], [source]),
+      params: r.resourceIdParam ? [r.resourceIdParam] : [],
+      isPublic: confirmed(true, [source]),
+      source,
+    };
+  });
 
   // 4. Dependencies
   const dependencies: DependencyInfo[] = [];
@@ -185,7 +351,7 @@ export async function buildProjectModel(rootDir: string): Promise<ProjectModel> 
     if (lower.includes("drizzle")) dbOrm = "drizzle";
     if (lower.includes("typeorm")) dbOrm = "typeorm";
     if (lower.includes("mongoose")) dbOrm = "mongoose";
-    if (lower.includes("SELECT ") || lower.includes("INSERT INTO ")) hasDirectDb = true;
+    if (lower.includes("select ") || lower.includes("insert into ")) hasDirectDb = true;
   }
 
   const envFiles = files.filter((f) => path.basename(f.path).startsWith(".env")).map((f) => f.path);
@@ -194,12 +360,37 @@ export async function buildProjectModel(rootDir: string): Promise<ProjectModel> 
   const reqContract = await loadRequirementsContract(absoluteRoot);
   const designBrief = await readDesignBrief(absoluteRoot);
 
+  const apiEndpoints: ApiEndpointModel[] = routes
+    .filter((r) => r.kind === "api")
+    .map((r) => ({
+      id: r.id,
+      method: r.methods[0] || "GET",
+      path: r.path,
+      file: r.source.file,
+      line: r.source.startLine || 1,
+      handler: r.handler,
+      isPublic: r.isPublic,
+      middlewareChain: r.middlewareChain,
+    }));
+
+  const archetype: Fact<ProductArchetype> = confirmed(
+    routes.some((r) => r.path.startsWith("/api")) ? "saas-dashboard" : "landing-only",
+    [{ file: "package.json" }]
+  );
+
   return {
     rootDir: absoluteRoot,
     framework,
+    frameworks: framework ? [confirmed(framework, [{ file: "package.json" }])] : [],
     files,
     dependencies,
     routes,
+    routeEntries: legacyRoutes,
+    components: [],
+    componentGraph: [],
+    apiEndpoints,
+    entities: [],
+    claims: [],
     auth: {
       detected: authProviders.length > 0 || hasAuthMiddleware,
       providers: Array.from(new Set(authProviders)),
@@ -221,6 +412,8 @@ export async function buildProjectModel(rootDir: string): Promise<ProjectModel> 
     },
     requirements: reqContract.requirements,
     designBrief: designBrief || undefined,
+    archetype,
+    coverage: emptyCoverage(),
     timestamp: new Date().toISOString(),
   };
 }
