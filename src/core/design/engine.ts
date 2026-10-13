@@ -332,6 +332,80 @@ export async function runDesignCheck(
     }
   }
 
+  // 5.6 Deep Analysis Pipeline Execution
+  try {
+    const { runAnalysisPipeline } = await import("../pipeline/index.js");
+    const pipelineResult = await runAnalysisPipeline({
+      rootDir: normalizedRoot,
+      includeCategories: [
+        "design-composition",
+        "design-hierarchy",
+        "design-repetition",
+        "design-system",
+        "design-brief",
+        "cross-page",
+        "ux-states",
+        "ux-flows",
+        "ux-ia",
+        "ux-fake-data",
+        "accessibility",
+      ],
+      debug: options.debug,
+    });
+
+    for (const rf of pipelineResult.findings) {
+      const isIgnored = !isIgnoreAll && ignoreList.includes(rf.ruleId);
+      const reason = reasonMap[rf.ruleId]?.trim();
+
+      const primaryLoc = rf.locations && rf.locations.length > 0 ? rf.locations[0] : undefined;
+      const targetFile = rf.file ?? primaryLoc?.file;
+      const targetLine = rf.line ?? primaryLoc?.line;
+
+      const fp = (rf.fingerprint && /^[a-f0-9]{64}$/.test(rf.fingerprint))
+        ? rf.fingerprint
+        : generateDesignFingerprint(
+            rf.ruleId,
+            targetFile,
+            targetLine,
+            rf.fingerprint || (rf.evidence ? rf.evidence.join(";") : undefined),
+          );
+
+      const sev = (rf.severity === "critical" || rf.severity === "high") ? "high" : rf.severity === "medium" ? "medium" : "low";
+
+      if (isIgnored && reason && reason.length > 0) {
+        suppressedFindings.push({
+          ruleId: rf.ruleId,
+          category: (rf.category as any) || "design-genericity",
+          severity: sev,
+          title: rf.title,
+          reason,
+          file: targetFile,
+        });
+      } else {
+        rawFindings.push({
+          ruleId: rf.ruleId,
+          category: (rf.category as any) || "design-genericity",
+          severity: sev,
+          title: rf.title,
+          whyItMatters: rf.description || rf.title,
+          evidence: rf.evidence,
+          recommendation: rf.recommendation || rf.agentObjective || "Review and refine according to design and engineering guidelines.",
+          agentAction: rf.agentObjective || rf.recommendation || "Refactor according to findings.",
+          fingerprint: fp,
+          file: targetFile,
+          line: targetLine,
+          endLine: rf.endLine ?? primaryLoc?.endLine ?? targetLine,
+          locations: rf.locations?.map((l) => ({ file: l.file, line: l.line, endLine: l.endLine })),
+          fixable: rf.fixable,
+        });
+      }
+    }
+  } catch (err) {
+    if (options.debug) {
+      console.error("[design-check] Pipeline analysis failed:", err);
+    }
+  }
+
   // 6. Loop escalation check
   const activeFingerprints = rawFindings.map((f) => f.fingerprint);
   const loopResult = await checkLoopProgress(normalizedRoot, activeFingerprints, {
