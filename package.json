@@ -32,6 +32,7 @@
     "test:fuzz": "vitest run --project fuzz",
     "test:perf": "vitest run --project perf",
     "test:coverage": "vitest run --coverage",
+    "test:foundation": "vitest run --project foundation",
     "test:all": "vitest run",
     "test:bench": "tsx tests/bench/benchmark.ts",
     "clean": "rimraf dist",

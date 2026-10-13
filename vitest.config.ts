@@ -66,6 +66,14 @@ export default defineConfig({
           testTimeout: 30000,
         },
       },
+      {
+        test: {
+          name: "foundation",
+          include: ["tests/foundation/**/*.test.ts"],
+          environment: "node",
+        },
+      },
     ],
   },
 });
+

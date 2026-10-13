@@ -1047,7 +1047,23 @@ program
     }
   });
 
+// ─── bilt test:foundation ────────────────────────────────────────────────────
+
+program
+  .command("test:foundation")
+  .description(
+    "Run Phase 1 Foundation verification (safe ingestion, unknown facts, determinism, arch lint)",
+  )
+  .action(async () => {
+    const { spawnSync } = await import("node:child_process");
+    const result = spawnSync("npx", ["vitest", "run", "--project", "foundation"], {
+      stdio: "inherit",
+    });
+    process.exitCode = result.status ?? 0;
+  });
+
 // ─── Error Handler ───────────────────────────────────────────────────────────
+
 
 function printError(error: unknown, debug?: boolean): void {
   const isDebug = debug || process.env.DEBUG === "1" || process.env.DEBUG === "true";
