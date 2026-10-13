@@ -10,10 +10,10 @@ import type { Fact, Provenance } from "../facts/fact.js";
 import { confirmed } from "../facts/fact.js";
 
 function appPathToRoute(filePath: string): { routePath: string; params: string[] } {
-  // Strip app/ and /route.ts (or src/app/ ...)
+  // Strip app/ (or src/app/) and trailing page/layout/route file
   let clean = filePath
     .replace(/^(?:src\/)?app\//, "")
-    .replace(/\/(?:route|page)\.[^.]+$/, "");
+    .replace(/(?:\/|^)(?:route|page|layout)\.[^.]+$/, "");
 
   const params: string[] = [];
   // Convert [param] -> :param
@@ -23,7 +23,7 @@ function appPathToRoute(filePath: string): { routePath: string; params: string[]
   });
 
   return {
-    routePath: `/${clean}`,
+    routePath: clean ? `/${clean}` : "/",
     params,
   };
 }
@@ -60,9 +60,34 @@ export const nextAdapter: FrameworkAdapter = {
 
     for (const file of repo.files) {
       if (file.skipped) continue;
+
+      const isApp = file.path.includes("app/") || file.path.includes("src/app/");
+      if (!isApp) continue;
+
+      const isPage =
+        /\/(?:page|layout)\.[jt]sx?$/.test(file.path) ||
+        /^(?:src\/)?app\/(?:page|layout)\.[jt]sx?$/.test(file.path);
+
+      if (isPage) {
+        const { routePath, params } = appPathToRoute(file.path);
+        const source: Provenance = { file: file.path, startLine: 1, endLine: 1 };
+        const isLayout = file.path.includes("layout.");
+        routes.push({
+          id: `${isLayout ? "layout" : "page"}:${routePath}`,
+          path: routePath,
+          kind: isLayout ? "layout" : "page",
+          methods: ["GET"],
+          handler: { name: isLayout ? "layout" : "default", file: file.path, line: 1 },
+          middlewareChain: confirmed(globalMw, [source]),
+          params,
+          isPublic: confirmed(true, [source]),
+          source,
+        });
+        continue;
+      }
+
       const isRouteHandler =
-        (file.path.includes("app/") || file.path.includes("src/app/")) &&
-        (file.path.endsWith("/route.ts") || file.path.endsWith("/route.js"));
+        file.path.endsWith("/route.ts") || file.path.endsWith("/route.js");
 
       if (!isRouteHandler) continue;
 

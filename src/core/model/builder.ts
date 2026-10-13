@@ -40,6 +40,11 @@ import type { FrameworkAdapter } from "../adapters/adapter.js";
 import { solveTaint } from "../flow/taint.js";
 import { buildApiSecurityModel } from "../flow/api-security.js";
 import { buildStyleModel } from "../style/resolver.js";
+import { analyzeUXStates } from "../product/ux-states.js";
+import { detectFlowsInFile } from "../product/flows.js";
+import { buildIAGraph } from "../product/ia-graph.js";
+import { analyzeDialogA11y, detectClickableDivs } from "../product/a11y.js";
+import { detectHardcodedMetrics } from "../product/claims.js";
 
 export const ADAPTERS: FrameworkAdapter[] = [nextAdapter, expressAdapter, nestAdapter];
 
@@ -131,6 +136,37 @@ export async function buildModel(repo: RepoIndex, ctx: ExtractCtx): Promise<Proj
   // Resolve design-system styles
   const styles = await buildStyleModel(repo);
 
+  // Build Product Analysis (L5)
+  const uxStates: import("../product/ux-states.js").UXStateModel[] = [];
+  const flows: import("../product/flows.js").FlowInstance[] = [];
+  const dialogs: import("../product/a11y.js").DialogA11yModel[] = [];
+  const clickableDivs: import("../product/a11y.js").ClickableDivModel[] = [];
+  const metricDisplays: import("../product/claims.js").MetricDisplay[] = [];
+
+  for (const f of repo.files) {
+    if (f.skipped) continue;
+    const content = f.bytes.toString("utf8");
+    const ux = analyzeUXStates(f.path, f.path, content);
+    if (ux) uxStates.push(ux);
+
+    const fl = detectFlowsInFile(f.path, content);
+    flows.push(...fl);
+
+    const dlg = analyzeDialogA11y(f.path, f.path, content);
+    if (dlg) dialogs.push(dlg);
+
+    const cd = detectClickableDivs(f.path, content);
+    clickableDivs.push(...cd);
+
+    const md = detectHardcodedMetrics(f.path, f.path, content);
+    metricDisplays.push(...md);
+  }
+
+  const iaGraph = buildIAGraph(
+    routes,
+    repo.files.map((f) => ({ path: f.path, content: f.bytes.toString("utf8") }))
+  );
+
   const archetype = confirmed<ProductArchetype>(
     routes.length > 0 ? "saas-dashboard" : "landing-only",
     [{ file: "package.json" }]
@@ -153,6 +189,12 @@ export async function buildModel(repo: RepoIndex, ctx: ExtractCtx): Promise<Proj
     claims: [],
     styles,
     taintPaths,
+    uxStates,
+    flows,
+    iaGraph,
+    dialogs,
+    clickableDivs,
+    metricDisplays,
     auth: {
       detected: false,
       providers: [],

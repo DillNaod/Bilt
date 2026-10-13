@@ -46,7 +46,13 @@ export type ModelFact =
   | "requirements"
   | "designBrief"
   | "styles"
-  | "files";
+  | "files"
+  | "uxStates"
+  | "flows"
+  | "iaGraph"
+  | "dialogs"
+  | "clickableDivs"
+  | "metricDisplays";
 
 export interface QueryFacade {
   routes(filter?: { kind?: RouteModel["kind"]; public?: boolean }): readonly RouteModel[];
@@ -68,6 +74,12 @@ export interface QueryFacade {
   designBrief(): DesignBrief | undefined;
   styles(): import("../style/model.js").StyleModel | undefined;
   files(): readonly import("./project-model.js").FileInfo[];
+  uxStates(): readonly import("../product/ux-states.js").UXStateModel[];
+  flows(): readonly import("../product/flows.js").FlowInstance[];
+  iaGraph(): import("../product/ia-graph.js").IAGraph;
+  dialogs(): readonly import("../product/a11y.js").DialogA11yModel[];
+  clickableDivs(): readonly import("../product/a11y.js").ClickableDivModel[];
+  metricDisplays(): readonly import("../product/claims.js").MetricDisplay[];
   consumed(): readonly string[];
 }
 
@@ -213,6 +225,42 @@ export function createQueryFacade(model: ProjectModel): QueryFacade {
     files() {
       consumedSet.add("files");
       return Object.freeze([...(frozenModel.files || [])]);
+    },
+
+    uxStates() {
+      consumedSet.add("uxStates");
+      return Object.freeze([...(frozenModel.uxStates || [])]);
+    },
+
+    flows() {
+      consumedSet.add("flows");
+      return Object.freeze([...(frozenModel.flows || [])]);
+    },
+
+    iaGraph() {
+      consumedSet.add("iaGraph");
+      return (
+        frozenModel.iaGraph || {
+          nodes: new Map(),
+          edges: [],
+          roots: [],
+        }
+      );
+    },
+
+    dialogs() {
+      consumedSet.add("dialogs");
+      return Object.freeze([...(frozenModel.dialogs || [])]);
+    },
+
+    clickableDivs() {
+      consumedSet.add("clickableDivs");
+      return Object.freeze([...(frozenModel.clickableDivs || [])]);
+    },
+
+    metricDisplays() {
+      consumedSet.add("metricDisplays");
+      return Object.freeze([...(frozenModel.metricDisplays || [])]);
     },
 
     consumed() {

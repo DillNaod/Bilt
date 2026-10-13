@@ -185,6 +185,12 @@ export interface ProjectModel {
   archetype: Fact<ProductArchetype>;
   styles?: import("../style/model.js").StyleModel;
   taintPaths?: import("../flow/taint.js").FlowPath[];
+  uxStates?: import("../product/ux-states.js").UXStateModel[];
+  flows?: import("../product/flows.js").FlowInstance[];
+  iaGraph?: import("../product/ia-graph.js").IAGraph;
+  dialogs?: import("../product/a11y.js").DialogA11yModel[];
+  clickableDivs?: import("../product/a11y.js").ClickableDivModel[];
+  metricDisplays?: import("../product/claims.js").MetricDisplay[];
   coverage: CoverageReport;
   timestamp: string;
 }
