@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.7] - 2026-10-13
+
+### Added & Deepened — Multi-Layered Deterministic Analysis Engine (L0–L10 Architecture)
+
+- **Layered Architecture Pipeline (L0–L10)**: Substantially deepened Bilt from superficial rules into an 11-layer deterministic analysis engine where each layer strictly consumes the layer below it, verified by automated architecture linting and pure `QueryFacade` contracts.
+- **L0 Safe Ingestion & Hostile Repo Sandbox**: Enforces hard parse depth limits, timeout worker sandboxes, symlink escape guards, and strict zero-execution guarantees on untrusted repositories.
+- **L1 Tri-State Fact Model & Coverage Degradation**: Introduces machine-checkable `Fact<T>` (`confirmed`, `absent`, `unknown`), fact dependency graphs, and automated rule degradation when required static facts cannot be reliably extracted.
+- **L2 Unified Project Model & Adapters**: Normalized representation of routes, components, endpoints, entities, dependencies, and navigation across Next.js, Express, Nest.js, Fastify, and Prisma.
+- **L3 Style Resolver & Design Tokens**: Computed style extraction normalizing Tailwind, CSS variables, typography, colors, radii, and spacing distributions.
+- **L4 Interprocedural Call Graph & Taint Engine**: Call graphs and source-to-sink taint analysis across middleware chains and route handlers.
+- **L4 Deep Security Rules & Anti-Gaming Remediation**:
+  - `SEC-AUTHZ-001`: IDOR / BOLA detection for unowned dynamic parameter lookups.
+  - `SEC-INPUT-002`: Mass assignment detection on database update/create calls.
+  - `SEC-DATA-003`: Sensitive field exposure in API responses (password hashes, secrets).
+  - `SEC-AUTHZ-004`: Client-driven privilege escalation and role assignment.
+  - `SEC-TENANT-001`: Multi-tenant data isolation and missing tenant filter detection.
+  - Anti-gaming `verify()` engine rejecting dead code evasions (`if (false)`), deleted routes, and late checks.
+- **L5 Product Quality & Experience Analysis**:
+  - `UX-FLOW-001`: User flow state completeness checking (verifying entry, loading, error, success, retry states).
+  - `IA-ORPHAN-001`: Information architecture reachability graph reporting dead-end and orphan page routes.
+  - `A11Y-MODAL-001`: Dialog accessibility verifying focus trapping and focus restoration.
+  - `UI-FAKE-METRIC-001`: Discrepancy detector flagging hardcoded cosmetic metric claims without dynamic data sources.
+- **L6 Design Grammar & Template Motif Analysis**:
+  - `DESIGN-STRUCTURE-001`: Template SaaS composition detector evaluating multi-motif co-occurrence across $\ge 4$ distinct design families (hero, layout, decoration, copy, proof, CTA) with zero false-positives on single gradients or data-driven grids.
+  - Component tree normalization (`normalizeComponentTree`) and structural similarity comparison.
+- **L8–L10 Pipeline Hardening, Cache & SARIF Output**:
+  - Integration of SHA-256 incremental caching, inline suppressions, diff scoping (`--changed`, `--base`), and standard SARIF 2.1.0 output formatting.
+
 ## [1.1.6] - 2026-10-09
 
 ### Added & Enhanced — Pre-Implementation Design Brief Gate & Dual-Registry Release Pipeline
