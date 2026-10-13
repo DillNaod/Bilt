@@ -12,7 +12,8 @@ import type { FlowPath } from "./taint.js";
 export function buildApiSecurityModel(
   endpoint: ApiEndpointModel,
   route: RouteModel,
-  taintPaths: FlowPath[]
+  taintPaths: FlowPath[],
+  fileContent?: string
 ): Fact<ApiSecurityModel> {
   const guardsFact = guardsFor(route);
   if (guardsFact.state === "unknown") {
@@ -33,8 +34,13 @@ export function buildApiSecurityModel(
     ? confirmed<boolean>(true, [route.source])
     : absent<boolean>([{ file: endpoint.file, line: endpoint.line }]);
 
-  const hasOwnershipCheck: Fact<boolean> = ownershipGuard
-    ? confirmed<boolean>(true, [ownershipGuard.at])
+  const hasInlineOwnership = fileContent
+    ? /(?:userId|user_id|ownerId|owner_id)\s*:\s*(?:req\.user|session\.user)/.test(fileContent) ||
+      /(?:req\.user|session\.user)\.id\s*===/.test(fileContent)
+    : false;
+
+  const hasOwnershipCheck: Fact<boolean> = (ownershipGuard || hasInlineOwnership)
+    ? confirmed<boolean>(true, [ownershipGuard ? ownershipGuard.at : { file: endpoint.file, startLine: endpoint.line, endLine: endpoint.line }])
     : absent<boolean>([{ file: endpoint.file, line: endpoint.line }]);
 
   // Check taint flows reaching this endpoint's file

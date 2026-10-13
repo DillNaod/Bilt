@@ -24,10 +24,8 @@ export interface Explanation {
   remediation: string[];
 }
 
-export interface VerifyResult {
-  status: "resolved" | "unresolved" | "regressed";
-  reason?: string;
-}
+import type { VerifyResult } from "../findings/verify.js";
+export type { VerifyResult } from "../findings/verify.js";
 
 export interface RuleDef {
   id: string; // CATEGORY-AREA-NNN, immutable once released

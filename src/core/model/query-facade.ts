@@ -45,7 +45,8 @@ export type ModelFact =
   | "database"
   | "requirements"
   | "designBrief"
-  | "styles";
+  | "styles"
+  | "files";
 
 export interface QueryFacade {
   routes(filter?: { kind?: RouteModel["kind"]; public?: boolean }): readonly RouteModel[];
@@ -54,7 +55,7 @@ export interface QueryFacade {
   components(filter?: { name?: RegExp; usesHook?: string }): readonly ComponentModel[];
   componentTree(id: ComponentId): NormalizedTree;
   callers(sym: SymbolRef): readonly SymbolRef[];
-  dataflow(from: SourceKind, to: SinkKind): readonly FlowPath[];
+  dataflow(from?: SourceKind, to?: SinkKind): readonly FlowPath[];
   entity(name: string): EntityModel | undefined;
   claims(): readonly ProductClaim[];
   archetype(): ProductArchetype | "unknown";
@@ -66,6 +67,7 @@ export interface QueryFacade {
   requirements(): readonly Requirement[];
   designBrief(): DesignBrief | undefined;
   styles(): import("../style/model.js").StyleModel | undefined;
+  files(): readonly import("./project-model.js").FileInfo[];
   consumed(): readonly string[];
 }
 
@@ -141,9 +143,14 @@ export function createQueryFacade(model: ProjectModel): QueryFacade {
       return Object.freeze([]);
     },
 
-    dataflow(_from, _to) {
+    dataflow(from, to) {
       consumedSet.add("dataflow");
-      return Object.freeze([]);
+      const list = (frozenModel.taintPaths as any) || [];
+      return Object.freeze(
+        list.filter(
+          (p: any) => (!from || p.source.kind === from) && (!to || p.sink.kind === to)
+        )
+      );
     },
 
     entity(name) {
@@ -201,6 +208,11 @@ export function createQueryFacade(model: ProjectModel): QueryFacade {
     styles() {
       consumedSet.add("styles");
       return frozenModel.styles;
+    },
+
+    files() {
+      consumedSet.add("files");
+      return Object.freeze([...(frozenModel.files || [])]);
     },
 
     consumed() {

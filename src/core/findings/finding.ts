@@ -63,12 +63,18 @@ export interface Finding {
   priority?: PriorityBreakdown;
   agentAction: AgentAction;
   introduced_by_change?: boolean;
+  subject?: SubjectKey;
 }
 
 export interface SubjectKey {
   kind: "endpoint" | "component" | "route" | "flow" | "token-scale" | "entity" | "generic";
   stableKey: string;
   shapeKey?: string;
+  route?: string;
+  method?: string;
+  param?: string;
+  field?: string;
+  [key: string]: unknown;
 }
 
 export function computeSha256(content: string): string {

@@ -122,7 +122,14 @@ export function solveTaint(repo: RepoIndex, _graph?: CallGraph): FlowPath[] {
           });
         }
 
-        if (flowScope.includes("pick(") || flowScope.includes("{ id,") || flowScope.includes("const { ")) {
+        const hasFieldSelection =
+          Boolean(srcMatch[2]) ||
+          flowScope.includes("pick(") ||
+          flowScope.includes("{ id,") ||
+          flowScope.includes("const { ") ||
+          /data\s*:\s*\{[^{}]*:[^{}]*\}/.test(flowScope);
+
+        if (hasFieldSelection) {
           flowSanitizers.push({
             kind: "field-pick",
             at: { file: file.path, startLine: srcLine, endLine: sinkLine },

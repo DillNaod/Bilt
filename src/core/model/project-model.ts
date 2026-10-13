@@ -47,15 +47,7 @@ export interface NormalizedTree {
   nodes: number;
 }
 
-export interface FlowPath {
-  source: SymbolRef;
-  sink: SymbolRef;
-  steps: SymbolRef[];
-  complete: boolean;
-}
-
-export type SourceKind = "req.body" | "req.params" | "req.query" | "req.headers" | "webhook" | "file";
-export type SinkKind = "db.write" | "db.query" | "exec" | "eval" | "response" | "log";
+export type { FlowPath, SourceKind, SinkKind, Hop, SanitizerInstance, SanitizerKind } from "../flow/taint.js";
 
 export interface ApiSecurityModel {
   endpoint: ApiEndpointModel;
@@ -192,6 +184,7 @@ export interface ProjectModel {
   designBrief?: DesignBrief;
   archetype: Fact<ProductArchetype>;
   styles?: import("../style/model.js").StyleModel;
+  taintPaths?: import("../flow/taint.js").FlowPath[];
   coverage: CoverageReport;
   timestamp: string;
 }

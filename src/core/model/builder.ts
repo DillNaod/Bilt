@@ -122,7 +122,9 @@ export async function buildModel(repo: RepoIndex, ctx: ExtractCtx): Promise<Proj
   for (const ep of apiEndpoints) {
     const matchingRoute = routes.find((r) => r.id === ep.id);
     if (matchingRoute) {
-      ep.securityModel = buildApiSecurityModel(ep, matchingRoute, taintPaths);
+      const file = repo.files.find((f) => f.path === ep.file);
+      const content = file ? file.bytes.toString("utf8") : "";
+      ep.securityModel = buildApiSecurityModel(ep, matchingRoute, taintPaths, content);
     }
   }
 
@@ -150,6 +152,7 @@ export async function buildModel(repo: RepoIndex, ctx: ExtractCtx): Promise<Proj
     entities: [],
     claims: [],
     styles,
+    taintPaths,
     auth: {
       detected: false,
       providers: [],
