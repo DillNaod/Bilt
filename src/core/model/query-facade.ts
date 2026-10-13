@@ -44,7 +44,8 @@ export type ModelFact =
   | "authorization"
   | "database"
   | "requirements"
-  | "designBrief";
+  | "designBrief"
+  | "styles";
 
 export interface QueryFacade {
   routes(filter?: { kind?: RouteModel["kind"]; public?: boolean }): readonly RouteModel[];
@@ -64,6 +65,7 @@ export interface QueryFacade {
   database(): DatabaseModel;
   requirements(): readonly Requirement[];
   designBrief(): DesignBrief | undefined;
+  styles(): import("../style/model.js").StyleModel | undefined;
   consumed(): readonly string[];
 }
 
@@ -194,6 +196,11 @@ export function createQueryFacade(model: ProjectModel): QueryFacade {
     designBrief() {
       consumedSet.add("designBrief");
       return frozenModel.designBrief;
+    },
+
+    styles() {
+      consumedSet.add("styles");
+      return frozenModel.styles;
     },
 
     consumed() {

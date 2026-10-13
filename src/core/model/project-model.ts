@@ -191,6 +191,7 @@ export interface ProjectModel {
   requirements: Requirement[];
   designBrief?: DesignBrief;
   archetype: Fact<ProductArchetype>;
+  styles?: import("../style/model.js").StyleModel;
   coverage: CoverageReport;
   timestamp: string;
 }
