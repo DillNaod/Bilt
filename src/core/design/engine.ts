@@ -11,6 +11,9 @@ import { applyDesignSafeFixes } from "./fix.js";
 import { loadConfig } from "../../config/config.js";
 import { checkLoopProgress, resetLoopState } from "../loop/state.js";
 import { getGitScope } from "../scoping/git-scope.js";
+import { logger } from "../logging/logger.js";
+
+const designLog = logger.child("design-check");
 import type {
   DesignCheckOptions,
   DesignCheckResult,
@@ -402,7 +405,7 @@ export async function runDesignCheck(
     }
   } catch (err) {
     if (options.debug) {
-      console.error("[design-check] Pipeline analysis failed:", err);
+      designLog.error("Pipeline analysis failed:", err);
     }
   }
 

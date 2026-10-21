@@ -4,6 +4,9 @@ import { SecretsEngine } from "./wrappers/secrets-engine.js";
 import { SecurityRulesEngine } from "./wrappers/security-rules-engine.js";
 import { ApiScanEngine } from "./wrappers/api-scan-engine.js";
 import { EnvGitignoreEngine } from "./wrappers/env-gitignore-engine.js";
+import { logger } from "../logging/logger.js";
+
+const engineLog = logger.child("engine-registry");
 
 export class EngineRegistry {
   private engines: Map<string, Engine> = new Map();
@@ -46,7 +49,7 @@ export class EngineRegistry {
         allFindings.push(...findings);
       } catch (err) {
         if (context.options?.debug) {
-          console.error(`Engine ${engine.id} failed:`, err);
+          engineLog.error(`Engine ${engine.id} failed:`, err);
         }
       }
     }

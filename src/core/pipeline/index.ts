@@ -11,6 +11,9 @@ import { getGitScope, isFindingIntroducedByChange } from '../scoping/git-scope.j
 import { formatSarifOutput } from '../output/formatters/sarif.js';
 import { parseInlineSuppressions } from '../trust/suppressions.js';
 import { loadReadinessCache, saveReadinessCache, computeContentHash } from '../readiness/cache.js';
+import { logger } from '../logging/logger.js';
+
+const pipelineLog = logger.child('pipeline');
 
 type PhaseStatus = 'ok' | 'skipped' | 'error';
 
@@ -161,7 +164,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
     const [k, v] = phase('model', elapsed(modelStart), 'error', String(err));
     phases[k] = v;
     if (options.debug) {
-      console.error('[pipeline] ProjectModel build failed:', err);
+      pipelineLog.error('ProjectModel build failed:', err);
     }
     for (const name of ['relationships', 'rules', 'findings', 'baseline']) {
       phases[name] = { durationMs: 0, status: 'skipped' };
@@ -203,7 +206,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
     const [k, v] = phase('rules', elapsed(rulesStart), 'error', String(err));
     phases[k] = v;
     if (options.debug) {
-      console.error('[pipeline] Rule evaluation failed:', err);
+      pipelineLog.error('Rule evaluation failed:', err);
     }
   }
 
@@ -262,7 +265,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
       sarifReport = formatSarifOutput(convertedFindings);
     } catch (err) {
       if (options.debug) {
-        console.error('[pipeline] SARIF generation error:', err);
+        pipelineLog.error('SARIF generation error:', err);
       }
     }
   }

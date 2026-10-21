@@ -85,7 +85,9 @@ export class BiltSupervisor {
         lower.includes(".env") ||
         lower.includes(".gitignore") ||
         lower.includes("secret") ||
-        lower.includes("key")
+        lower.includes("key") ||
+        lower.includes("config") ||
+        [".ts", ".js", ".mjs", ".cjs", ".py", ".go", ".json"].includes(ext)
       ) {
         categories.add("secrets-and-env");
       }
