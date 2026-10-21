@@ -1,4 +1,4 @@
-name: CI
+name: CI Quality Gate
 
 on:
   push:
@@ -9,11 +9,14 @@ on:
       - main
 
 jobs:
-  build-and-test:
+  verify:
+    name: Lint, Typecheck, Build, Test & Pack Smoke Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js (latest LTS)
         uses: actions/setup-node@v4
@@ -21,23 +24,36 @@ jobs:
           node-version: 'lts/*'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: 1. Clean Install
         run: npm ci
 
-      - name: Run lint
+      - name: 2. Code Lint
         run: npm run lint
 
-      - name: Run typecheck
+      - name: 3. Typecheck
         run: npx tsc --noEmit
 
-      - name: Build the project
+      - name: 4. Build
         run: npm run build
 
-      - name: Run all tests
+      - name: 5. Complete Test Suite
         run: npm run test:all
 
-      - name: Run integration tests
-        run: npm run test:integration
+      - name: 6. Enforce Coverage Thresholds
+        run: npm run test:coverage
 
-      - name: Ensure CLI starts successfully
-        run: node dist/cli.js --help
+      - name: 7. Security Dependency Audit
+        run: npm audit --audit-level=critical
+
+      - name: 8. Package Build & Smoke Test
+        run: |
+          TARBALL=$(npm pack | tail -n 1)
+          echo "Packed tarball: $TARBALL"
+          TMP_DIR=$(mktemp -d)
+          cd "$TMP_DIR"
+          npm init -y
+          npm install "$GITHUB_WORKSPACE/$TARBALL"
+          ./node_modules/.bin/bilt --version
+          ./node_modules/.bin/bilt --help
+          cd "$GITHUB_WORKSPACE"
+          rm -rf "$TMP_DIR" "$TARBALL"
