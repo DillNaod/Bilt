@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # Maintain npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "team-bilt"
+    labels:
+      - "dependencies"
+      - "security"
+    ignore:
+      # Protect against speculative / unstable major version breaking changes
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  # Maintain GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "ci"
+      - "dependencies"
