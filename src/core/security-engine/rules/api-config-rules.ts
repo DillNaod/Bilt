@@ -46,7 +46,7 @@ export const apiConfigRules: SecurityRule[] = [
         const lower = lineText.toLowerCase();
 
         if (
-          (lower.includes("res.json(") || lower.includes("res.send(")) &&
+          (lower.includes(".json(") || lower.includes(".send(")) &&
           (lower.includes("err.stack") || lower.includes("error.stack") || lower.includes("e.stack"))
         ) {
           findings.push({

@@ -30,9 +30,13 @@ export const secretsAndEnvChecker: CategoryChecker = {
 
       // Skip non-source files
       if (
+        normalizedPath.startsWith("node_modules/") ||
         normalizedPath.includes("/node_modules/") ||
+        normalizedPath.startsWith("dist/") ||
         normalizedPath.includes("/dist/") ||
+        normalizedPath.startsWith("build/") ||
         normalizedPath.includes("/build/") ||
+        normalizedPath.startsWith(".git/") ||
         normalizedPath.includes("/.git/")
       ) {
         continue;
