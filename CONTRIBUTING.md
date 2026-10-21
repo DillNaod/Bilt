@@ -35,8 +35,9 @@ npm run build
 | `npm test` | Runs the full Vitest test suite |
 | `npm run test:unit` | Runs unit tests |
 | `npm run test:integration` | Runs integration tests against temporary repositories |
+| `npm run test:coverage` | Enforces strict coverage thresholds (≥80% lines, ≥80% functions, ≥70% branches) |
 | `npm run test:bench` | Runs the 100% precision benchmark harness against fixtures |
-| `npm run lint` | Runs ESLint |
+| `npm run lint` | Runs ESLint (0 warnings policy) |
 | `npm run format` | Formats code with Prettier |
 | `npm run clean` | Removes `dist/` directory |
 
@@ -44,14 +45,16 @@ npm run build
 
 ## 3. Architecture Overview
 
-Bilt is architected in distinct layers:
+Bilt is architected in distinct, testable layers:
 
 ```text
-CLI (Commander entry points in src/cli.ts and src/commands/)
+CLI (Commander entry points in src/cli/ modular registration)
   ↓
-Application / Service Layer (Readiness runner, scan orchestrator, fix orchestrator)
+Commands (Thin orchestration in src/commands/ and src/commands/fix/)
   ↓
-Core Engines (Security rule engine, secrets scanner, env analyzer, AST analyzer)
+Core Services & Pipeline (Readiness runner, scan orchestrator, diagnostic logger in src/core/logging/)
+  ↓
+Project Model / Analysis Engines (Extracted in src/core/project-model/extractors/)
   ↓
 Pure Detection Logic (Regex & AST rules, entropy analysis, route extractors)
   ↓

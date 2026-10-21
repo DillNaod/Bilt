@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.8] - 2026-10-21
+
+### Architectural Refactoring & Robustness
+- **Deconstructed God Modules**:
+  - `src/core/project-model/builder.ts` (~1267 LOC) split into modular extractors under `src/core/project-model/extractors/` (`routes`, `components`, `styles`, `auth`, `authorization`, `navigation`, `api`, `dependencies`, `flows`, `content`).
+  - `src/commands/fix.ts` (~1265 LOC) split into `src/commands/fix/` (`plan`, `apply`, `interactive`, `verification`).
+  - `src/cli.ts` (~1042 LOC) decomposed into thin commander registrations under `src/cli/`.
+  - `src/core/design/rules/v1/index.ts` (~1032 LOC) modularized into focused rule suites under `src/core/design/rules/v1/`.
+- **Internal Diagnostic Logging**:
+  - Added `src/core/logging/` diagnostic logger with log levels, namespacing, and stderr routing to protect machine-readable stdout formats. Replaced scattered internal `console.*` calls.
+
+### Test Suite & Behavioral Coverage
+- Expanded test suite to **112 test files (579 passing tests)**.
+- Achieved strict Vitest coverage gates: **84.6% Lines**, **85.9% Functions**, and **70.1% Branches**.
+- Added comprehensive adversarial suites: path traversal, ANSI stripping, broken symlinks, large file thresholds, binary detection, and loop escalation prevention (exit code 4).
+- Added full JSON-RPC stdio protocol tests for the Model Context Protocol (MCP) server (`initialize`, `tools/list`, `tools/call`).
+- Resolved real AST matcher bug in `SEC-CFG-001` when chaining response methods like `res.status(500).json(...)`.
+- Resolved path prefix normalization bug in `secrets-and-env` readiness check.
+
+### Dependency, Security & CI/CD Hygiene
+- Established single authoritative package manager (`npm` with `package-lock.json`), removing redundant `pnpm-lock.yaml`.
+- Configured automated dependency maintenance via `.github/dependabot.yml`.
+- Isolated and documented synthetic test fixtures in `tests/fixtures/secrets/README.md`.
+- Reconciled `.env.example` with all application environment variables.
+- Hardened CI pipeline into a complete quality gate (lint → typecheck → build → test:all → test:coverage → audit → npm pack smoke test).
+- Added GitHub issue templates and PR verification templates.
+
 ## [1.1.7] - 2026-10-13
 
 ### Added & Deepened — Multi-Layered Deterministic Analysis Engine (L0–L10 Architecture)

@@ -1,6 +1,6 @@
 # Bilt
 
-[![npm version](https://img.shields.io/badge/npm-v1.1.5-blue.svg)](https://www.npmjs.com/package/bilt-toolkit)
+[![npm version](https://img.shields.io/badge/npm-v1.1.8-blue.svg)](https://www.npmjs.com/package/bilt-toolkit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/Samuel-0228/bilt)
 [![Coverage Status](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/Samuel-0228/bilt)

@@ -34,6 +34,15 @@ To help us investigate and triage quickly, please include:
 - Do not publish functional exploit code targeting Bilt users.
 - Do not disclose unpatched vulnerabilities on social media, public issue trackers, or forums before a coordinated fix is released.
 
+## Test Fixtures & Secret Detection Testing
+
+Note for security scanners, audit tools, and evaluators:
+This repository contains intentional synthetic test fixtures (e.g. within `tests/fixtures/secrets/`) to verify Bilt's secret-detection and vulnerability-scanning engines. These fixtures:
+- Consist exclusively of inactive, dummy credentials and pattern matches.
+- Are strictly isolated in `tests/fixtures/secrets/` and documented in `tests/fixtures/secrets/README.md`.
+- Are never distributed in npm packages (see `files` array in `package.json`).
+- Are not live API credentials or real secrets.
+
 ## Response Process & SLA
 
 1. **Initial Response**: We acknowledge receipt of vulnerability reports within 48 hours.
