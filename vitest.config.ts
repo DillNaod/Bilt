@@ -4,11 +4,12 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "html"],
+      reporter: ["text", "json", "json-summary", "html"],
       include: ["src/**/*.ts"],
       exclude: [
         "src/index.ts",
         "src/cli.ts",
+        "src/cli/**/*",
         "src/types/**/*",
         "src/commands/**/*",
         "src/plugins/**/*",
@@ -32,6 +33,13 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["tests/unit/**/*.test.ts"],
+          environment: "node",
+        },
+      },
+      {
+        test: {
+          name: "agent",
+          include: ["tests/agent/**/*.test.ts"],
           environment: "node",
         },
       },

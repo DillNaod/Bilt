@@ -67,4 +67,71 @@ describe("API Security Scan Engine", () => {
       expect(f.aiExplanation?.howToFix).toBeTruthy();
     }
   });
+
+  it("should detect Next.js App, Next.js Pages, Fastify, FastAPI, Django, and Rails routes", async () => {
+    const syntheticFiles = [
+      {
+        path: "src/app/api/products/[id]/route.ts",
+        content: `
+          export async function GET(req: Request) { return Response.json({ id: 1 }); }
+          export async function DELETE(req: Request) { return Response.json({ ok: true }); }
+        `,
+      },
+      {
+        path: "pages/api/orders.ts",
+        content: `
+          export default function handler(req, res) {
+            if (req.method === 'POST') { res.status(201).json({}); }
+            else if (req.method === 'GET') { res.json([]); }
+          }
+        `,
+      },
+      {
+        path: "src/server.ts",
+        content: `
+          fastify.get('/api/health', async () => ({ status: 'ok' }));
+          fastify.post('/api/auth/login', async () => ({ token: 'abc' }));
+        `,
+      },
+      {
+        path: "main.py",
+        content: `
+          @app.get("/items/{item_id}")
+          def read_item(item_id: int):
+              return {"item_id": item_id}
+
+          @router.post("/items")
+          def create_item():
+              return {"ok": True}
+        `,
+      },
+      {
+        path: "urls.py",
+        content: `
+          urlpatterns = [
+              path('api/v1/users/', views.UserList.as_view()),
+          ]
+        `,
+      },
+      {
+        path: "config/routes.rb",
+        content: `
+          Rails.application.routes.draw do
+            resources :articles
+            get '/ping', to: 'status#ping'
+          end
+        `,
+      },
+    ];
+
+    const routes = await detectApiRoutes("/mock/root", syntheticFiles);
+    expect(routes.length).toBeGreaterThan(5);
+
+    const frameworks = new Set(routes.map((r) => r.framework));
+    expect(frameworks.has("nextjs")).toBe(true);
+    expect(frameworks.has("fastify")).toBe(true);
+    expect(frameworks.has("fastapi")).toBe(true);
+    expect(frameworks.has("django")).toBe(true);
+    expect(frameworks.has("rails")).toBe(true);
+  });
 });
