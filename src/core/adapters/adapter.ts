@@ -3,7 +3,7 @@
 // RouteModel, ApiEndpointModel, and Middleware facts.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { RepoIndex } from "../model/builder.js";
+import type { RepoIndex } from "../model/project-model.js";
 import type { ExtractCtx } from "../facts/extractor.js";
 import type { RouteModel, MiddlewareRef } from "../model/project-model.js";
 import type { Fact, Provenance } from "../facts/fact.js";

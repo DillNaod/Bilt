@@ -4,58 +4,25 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Provenance } from "../facts/fact.js";
-import type { RepoIndex } from "../model/builder.js";
+import type {
+  RepoIndex,
+  SourceKind,
+  SinkKind,
+  SanitizerKind,
+  Hop,
+  SanitizerInstance,
+  FlowPath,
+} from "../model/types.js";
 import type { CallGraph } from "./callgraph.js";
 
-export type SourceKind =
-  | "req.body"
-  | "req.query"
-  | "req.params"
-  | "headers"
-  | "cookies"
-  | "upload"
-  | "webhook"
-  | "url-fetch-response"
-  | "form-data";
-
-export type SinkKind =
-  | "orm-write"
-  | "orm-where"
-  | "raw-sql"
-  | "exec"
-  | "fs-path"
-  | "redirect"
-  | "fetch-url"
-  | "html-inject"
-  | "eval"
-  | "response-body"
-  | "log";
-
-export type SanitizerKind =
-  | "schema-validate"
-  | "field-pick"
-  | "parameterized-query"
-  | "html-escape";
-
-export interface Hop {
-  at: Provenance;
-  via: "assign" | "arg" | "return" | "spread" | "property" | "destructure";
-}
-
-export interface SanitizerInstance {
-  kind: SanitizerKind;
-  at: Provenance;
-  library?: string;
-  coversFields?: string[];
-}
-
-export interface FlowPath {
-  source: { kind: SourceKind; at: Provenance };
-  sink: { kind: SinkKind; at: Provenance; callee: string };
-  hops: Hop[];
-  sanitizers: SanitizerInstance[];
-  complete: boolean;
-}
+export type {
+  SourceKind,
+  SinkKind,
+  SanitizerKind,
+  Hop,
+  SanitizerInstance,
+  FlowPath,
+};
 
 export function solveTaint(repo: RepoIndex, _graph?: CallGraph): FlowPath[] {
   const paths: FlowPath[] = [];

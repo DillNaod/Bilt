@@ -1,6 +1,6 @@
 // ─── Route Map ───
 import { detectApiRoutes } from '../api-scan/route-detector.js';
-import type { RouteMapEntry } from './check-runner.js';
+import type { RouteMapEntry } from './types.js';
 import type { APIRouteInfo } from '../api-scan/types.js';
 
 export async function extractRouteMap(

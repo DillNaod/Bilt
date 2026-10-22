@@ -4,7 +4,7 @@
 
 import type { BiltCheckFinding } from "../finding.js";
 import { generateCheckFingerprint, normalizeAgentAction } from "../finding.js";
-import type { CategoryChecker, CheckContext } from "../check-runner.js";
+import type { CategoryChecker, CheckContext } from "../types.js";
 import { loadRequirementsContract } from "../../contract/requirements.js";
 
 export const requirementsChecker: CategoryChecker = {

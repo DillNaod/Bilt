@@ -10,7 +10,13 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { checkLoopProgress, resetLoopState } from "../loop/state.js";
 import { recordChangeIteration } from "../loop/ledger.js";
-import type { EscalationReason } from "./protocol.js";
+
+export type EscalationReason =
+  | 'no-progress'        // N consecutive runs, same fingerprints — agent is stuck
+  | 'oscillation'        // A→B→A→B thrashing detected
+  | 'budget-exhausted'   // Iteration budget exceeded
+  | 'tamper-detected'    // Bilt config was modified to suppress rules
+  | 'unknown';
 
 export type SessionStatus = "active" | "passed" | "failed" | "escalated";
 

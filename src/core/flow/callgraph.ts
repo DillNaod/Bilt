@@ -4,7 +4,7 @@
 
 import type { Fact, Provenance } from "../facts/fact.js";
 import { confirmed, unknown } from "../facts/fact.js";
-import type { RepoIndex } from "../model/builder.js";
+import type { RepoIndex } from "../model/types.js";
 import type { ExtractCtx } from "../facts/extractor.js";
 
 export interface SymbolRef {

@@ -35,13 +35,11 @@ import type { SecurityFindingDetails } from "../core/security-engine/types.js";
 import {
   colors,
   glyphs,
-  pulseBar,
-  isPlainMode,
   Spinner,
   showBliptBanner,
+  isPlainMode,
 } from "../ui/theme.js";
 import { formatFinding } from "../ui/format.js";
-import { playSound } from "../ui/sound.js";
 import { VERIFIERS } from "../core/scan/verifiers/index.js";
 import {
   getGitScope,
@@ -52,13 +50,9 @@ import {
   isFingerprintInBaseline,
 } from "../core/scoping/baseline.js";
 import { computeFingerprint } from "../core/finding/fingerprint.js";
-import { toAgentFinding } from "../core/finding/mapper.js";
-import { formatAgentOutput } from "../core/output/formatters/agent.js";
-import { formatSarifOutput } from "../core/output/formatters/sarif.js";
-import { statusToExitCode } from "../core/output/types.js";
-import { checkLoopProgress } from "../core/loop/state.js";
 import { validateProjectDirectory } from "../core/safety/index.js";
 import { VERSION } from "../version.js";
+import { reportScanResult } from "./scan/reporter.js";
 
 // Helper to run a scan step and stream findings
 async function runScanStep(
@@ -549,101 +543,16 @@ export async function executeScan(
       duration,
     };
 
-    if (options.format === "agent") {
-      const agentFindings = result.findings.map((f) =>
-        toAgentFinding(f, {
-          introducedByChange: f.introducedByChange !== false,
-          surroundingSnippet: f.preview,
-        }),
-      );
-
-      const loopResult = await checkLoopProgress(
-        rootDir,
-        agentFindings.map((af) => af.fingerprint),
-        { maxIterations: options.maxIterations },
-      );
-
-      const agentOutput = formatAgentOutput({
-        toolVersion: VERSION,
-        findings: agentFindings,
-        introducedOnly: Boolean(options.changed || options.base),
-        iteration: loopResult.iteration,
-        statusOverride: loopResult.shouldEscalate ? "escalate" : undefined,
-        escalationMessage: loopResult.escalationReason,
-      });
-      console.log(JSON.stringify(agentOutput, null, 2));
-      process.exitCode = statusToExitCode(agentOutput.status);
-    } else if (options.format === "sarif") {
-      const scopedFindings =
-        options.changed || options.base
-          ? result.findings.filter((f) => f.introducedByChange !== false)
-          : result.findings;
-      const agentFindings = scopedFindings.map((f) =>
-        toAgentFinding(f, {
-          introducedByChange: f.introducedByChange !== false,
-          surroundingSnippet: f.preview,
-        }),
-      );
-      const sarif = formatSarifOutput(agentFindings, VERSION);
-      console.log(JSON.stringify(sarif, null, 2));
-      const criticalCount = scopedFindings.filter(
-        (f) => f.severity === "critical",
-      ).length;
-      if (criticalCount > 0) process.exitCode = 1;
-    } else if (isJson || options.format === "json") {
-      console.log(JSON.stringify(result, null, 2));
-      const criticalCount = findings.filter(
-        (f) => f.severity === "critical",
-      ).length;
-      if (criticalCount > 0) process.exitCode = 1;
-    } else if (isQuiet) {
-      const criticalCount = findings.filter(
-        (f) => f.severity === "critical",
-      ).length;
-      if (criticalCount > 0) process.exitCode = 1;
-    } else if (!isSilent) {
-      console.log(pulseBar(score));
-      console.log("");
-
-      const criticalCount = findings.filter(
-        (f) => f.severity === "critical",
-      ).length;
-      const warningCount = findings.filter(
-        (f) => f.severity === "warning",
-      ).length;
-      const issuesCount = criticalCount + warningCount;
-
-      if (criticalCount > 0 && config.sound) {
-        playSound();
-      }
-
-      const parts: string[] = [];
-      if (issuesCount === 0) {
-        parts.push(colors.mintClear.apply("all clear"));
-      } else {
-        parts.push(
-          colors.pulseCoral.apply(
-            `${issuesCount} issue${issuesCount > 1 ? "s" : ""}`,
-          ),
-        );
-      }
-
-      parts.push(colors.slateDim.apply("bilt fix"));
-      const isPlain = isPlainMode();
-      const mode =
-        options.verbose || options.details !== false || isPlain
-          ? "detail"
-          : "headline";
-      if (mode !== "detail") {
-        parts.push(colors.slateDim.apply("bilt scan"));
-      }
-
-      console.log(`  ${parts.join(colors.slateDim.dim(" \u00B7 "))}`);
-      console.log("");
-      if (criticalCount > 0) {
-        process.exitCode = 1;
-      }
-    }
+    await reportScanResult({
+      result,
+      findings,
+      options,
+      config,
+      rootDir,
+      isJson,
+      isQuiet,
+      isSilent,
+    });
 
     return result;
   } catch (error) {

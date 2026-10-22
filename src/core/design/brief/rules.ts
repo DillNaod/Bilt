@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import type { DesignBrief } from "./types.js";
 import type { DesignSnapshot, DesignFinding } from "../types.js";
-import { generateDesignFingerprint } from "../engine.js";
+import { generateDesignFingerprint } from "../fingerprint.js";
 
 function getCombinationScore(snapshot: DesignSnapshot): number {
     const totalCards = snapshot.components.filter((c) => c.isCard).length;

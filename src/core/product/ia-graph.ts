@@ -3,26 +3,10 @@
 // orphan pages and dead navigation links.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { RouteModel } from "../model/project-model.js";
+import type { RouteModel, IAEdge, IANode, IAGraph } from "../model/types.js";
 import type { Provenance } from "../facts/fact.js";
 
-export interface IAEdge {
-  from: string;
-  to: string;
-  via: "nav" | "link" | "redirect" | "router.push";
-  at: Provenance;
-}
-
-export interface IANode {
-  route: RouteModel;
-  primaryActions: string[];
-}
-
-export interface IAGraph {
-  nodes: Map<string, IANode>;
-  edges: IAEdge[];
-  roots: string[];
-}
+export type { IAEdge, IANode, IAGraph };
 
 export function buildIAGraph(
   routes: readonly RouteModel[],

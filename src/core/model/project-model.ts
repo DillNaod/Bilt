@@ -10,7 +10,7 @@ import fg from "fast-glob";
 import type { FrameworkInfo } from "../../types/index.js";
 import { detectEcosystem } from "../ecosystem/detector.js";
 import { extractRouteMap } from "../readiness/route-map.js";
-import type { RouteMapEntry } from "../readiness/check-runner.js";
+import type { RouteMapEntry } from "../readiness/types.js";
 import { readDesignBrief } from "../design/brief/storage.js";
 import type { DesignBrief } from "../design/brief/types.js";
 import { loadRequirementsContract, type Requirement } from "../contract/requirements.js";
@@ -18,182 +18,33 @@ import { MAX_FILE_SIZE } from "../readiness/cache.js";
 import type { Fact, Provenance } from "../facts/fact.js";
 import { confirmed, absent } from "../facts/fact.js";
 import type { CoverageReport } from "../facts/coverage.js";
+import type { IngestedFile } from "../ingest/limits.js";
+import type {
+  RepoIndex,
+  RouteId,
+  ComponentId,
+  SymbolRef,
+  MiddlewareRef,
+  Edge,
+  NormalizedTree,
+  ApiSecurityModel,
+  ApiEndpointModel,
+  ComponentModel,
+  EntityModel,
+  ProductClaim,
+  FileInfo,
+  DependencyInfo,
+  AuthModel,
+  AuthorizationModel,
+  DatabaseModel,
+  EnvironmentModel,
+  ProductArchetype,
+  RouteModel,
+  ProjectModel,
+} from "./types.js";
 
-export type RouteId = string;
-export type ComponentId = string;
-
-export interface SymbolRef {
-  name: string;
-  file: string;
-  line?: number;
-  exported?: boolean;
-}
-
-export interface MiddlewareRef {
-  name: string;
-  ref?: SymbolRef;
-  dominatesEffects?: boolean;
-}
-
-export interface Edge<T> {
-  from: T;
-  to: T;
-  kind?: string;
-}
-
-export interface NormalizedTree {
-  signature: string;
-  depth: number;
-  nodes: number;
-}
-
+export * from "./types.js";
 export type { FlowPath, SourceKind, SinkKind, Hop, SanitizerInstance, SanitizerKind } from "../flow/taint.js";
-
-export interface ApiSecurityModel {
-  endpoint: ApiEndpointModel;
-  hasAuth: Fact<boolean>;
-  hasOwnershipCheck: Fact<boolean>;
-  hasInputValidation: Fact<boolean>;
-  passesBodyToDb: boolean;
-  sensitiveFieldsReturned: string[];
-}
-
-export interface ApiEndpointModel {
-  id: string;
-  method: string;
-  path: string;
-  file: string;
-  line: number;
-  framework?: string;
-  handler: SymbolRef;
-  isPublic: Fact<boolean>;
-  middlewareChain: Fact<MiddlewareRef[]>;
-  securityModel?: Fact<ApiSecurityModel>;
-}
-
-export interface ComponentModel {
-  id: ComponentId;
-  name: string;
-  file: string;
-  line: number;
-  isSection?: boolean;
-  isCard?: boolean;
-  isModal?: boolean;
-  isHero?: boolean;
-  isDataDisplay?: boolean;
-  hasLoadingState?: boolean;
-  hasErrorState?: boolean;
-  hasEmptyState?: boolean;
-  tree?: NormalizedTree;
-  decorativeSignals?: any[];
-  ctaTexts?: string[];
-  rawText?: string;
-}
-
-export interface EntityModel {
-  name: string;
-  file: string;
-  fields: { name: string; type: string; isSensitive?: boolean }[];
-  operations: { kind: "create" | "read" | "update" | "delete"; at: Provenance }[];
-}
-
-export interface ProductClaim {
-  text: string;
-  provenance: Provenance;
-  category: "metric" | "security" | "feature" | "social-proof";
-}
-
-export interface FileInfo {
-  path: string;
-  absolutePath: string;
-  size: number;
-  content: string;
-}
-
-export interface DependencyInfo {
-  name: string;
-  version: string;
-  isDev: boolean;
-}
-
-export interface AuthModel {
-  detected: boolean;
-  providers: string[];
-  hasMiddleware: boolean;
-  protectedRoutes?: string[];
-  publicRoutes?: string[];
-}
-
-export interface AuthorizationModel {
-  detected: boolean;
-  hasRoleChecks: boolean;
-  unprotectedRoutesCount: number;
-}
-
-export interface DatabaseModel {
-  detected: boolean;
-  orm?: string;
-  hasDirectQueries: boolean;
-}
-
-export interface EnvironmentModel {
-  envFiles: string[];
-  missingVarsCount: number;
-}
-
-export type ProductArchetype =
-  | "marketplace"
-  | "saas-dashboard"
-  | "editorial"
-  | "ecommerce"
-  | "internal-tool"
-  | "docs-site"
-  | "landing-only"
-  | "unclassified";
-
-export interface RouteModel {
-  id: RouteId;
-  path: string;
-  kind: "page" | "api" | "action" | "layout";
-  methods: string[];
-  handler: SymbolRef;
-  middlewareChain: Fact<MiddlewareRef[]>;
-  params: string[];
-  isPublic: Fact<boolean>;
-  source: Provenance;
-}
-
-export interface ProjectModel {
-  rootDir: string;
-  framework?: FrameworkInfo;
-  frameworks?: Fact<FrameworkInfo>[];
-  files: FileInfo[];
-  dependencies: DependencyInfo[];
-  routes: RouteModel[];
-  routeEntries?: RouteMapEntry[];
-  components: ComponentModel[];
-  componentGraph: Edge<ComponentId>[];
-  apiEndpoints: ApiEndpointModel[];
-  entities: EntityModel[];
-  claims: ProductClaim[];
-  auth: AuthModel;
-  authorization: AuthorizationModel;
-  database: DatabaseModel;
-  environment: EnvironmentModel;
-  requirements: Requirement[];
-  designBrief?: DesignBrief;
-  archetype: Fact<ProductArchetype>;
-  styles?: import("../style/model.js").StyleModel;
-  taintPaths?: import("../flow/taint.js").FlowPath[];
-  uxStates?: import("../product/ux-states.js").UXStateModel[];
-  flows?: import("../product/flows.js").FlowInstance[];
-  iaGraph?: import("../product/ia-graph.js").IAGraph;
-  dialogs?: import("../product/a11y.js").DialogA11yModel[];
-  clickableDivs?: import("../product/a11y.js").ClickableDivModel[];
-  metricDisplays?: import("../product/claims.js").MetricDisplay[];
-  coverage: CoverageReport;
-  timestamp: string;
-}
 
 function emptyCoverage(): CoverageReport {
   return {

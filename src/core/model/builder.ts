@@ -10,28 +10,13 @@ import type {
   ComponentModel,
   ApiEndpointModel,
   ProductArchetype,
+  RepoIndex,
 } from "./project-model.js";
+import { createRepoIndex } from "./project-model.js";
 import { confirmed, absent } from "../facts/fact.js";
 
-export interface RepoIndex {
-  rootDir: string;
-  files: IngestedFile[];
-  file(relPath: string): IngestedFile | undefined;
-}
-
-export function createRepoIndex(rootDir: string, files: IngestedFile[]): RepoIndex {
-  const map = new Map<string, IngestedFile>();
-  for (const f of files) {
-    map.set(f.path, f);
-  }
-  return {
-    rootDir,
-    files,
-    file(p: string) {
-      return map.get(p);
-    },
-  };
-}
+export type { RepoIndex };
+export { createRepoIndex };
 
 import { nextAdapter } from "../adapters/next.js";
 import { expressAdapter } from "../adapters/express.js";

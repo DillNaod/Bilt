@@ -5,7 +5,7 @@
 
 import type { ReadinessCategory } from "../taxonomy.js";
 import type { BiltCheckFinding, CheckMode } from "../finding.js";
-import type { CategoryChecker, CheckContext } from "../check-runner.js";
+import type { CategoryChecker, CheckContext } from "../types.js";
 import { generateCheckFingerprint } from "../finding.js";
 
 const CATEGORY: ReadinessCategory = "monitoring-rollback";

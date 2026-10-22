@@ -3,7 +3,7 @@
 // authoring-method-independent StyleInventory.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { RepoIndex } from "../model/builder.js";
+import type { RepoIndex } from "../model/project-model.js";
 import type {
   StyleModel,
   StyleInventory,

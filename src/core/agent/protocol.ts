@@ -16,8 +16,10 @@ import type { CheckResult } from '../readiness/check-runner.js';
 import type { BiltCheckFinding, FindingLocation, AgentActionContract, CheckSeverity } from '../readiness/finding.js';
 import { normalizeAgentAction } from '../readiness/finding.js';
 import type { ReadinessCategory } from '../readiness/taxonomy.js';
-import type { AgentSession, SessionStatus } from './session.js';
+import type { AgentSession, SessionStatus, EscalationReason } from './session.js';
 import { DISCLAIMER } from '../readiness/disclaimer.js';
+
+export type { EscalationReason };
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -31,13 +33,6 @@ export type NextActionType =
   | 'stop'       // Agent MUST STOP — project satisfies all checks
   | 'escalate'   // Agent MUST stop and ask human maintainer — loop or regression detected
   | 'none';      // Alias for stop — all clear
-
-export type EscalationReason =
-  | 'no-progress'        // N consecutive runs, same fingerprints — agent is stuck
-  | 'oscillation'        // A→B→A→B thrashing detected
-  | 'budget-exhausted'   // Iteration budget exceeded
-  | 'tamper-detected'    // Bilt config was modified to suppress rules
-  | 'unknown';
 
 export interface AgentNextAction {
   type: NextActionType;

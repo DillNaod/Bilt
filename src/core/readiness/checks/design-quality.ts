@@ -4,7 +4,7 @@
 
 import type { ReadinessCategory } from "../taxonomy.js";
 import type { BiltCheckFinding, CheckMode } from "../finding.js";
-import type { CategoryChecker, CheckContext } from "../check-runner.js";
+import type { CategoryChecker, CheckContext } from "../types.js";
 import { runDesignCheck } from "../../design/engine.js";
 
 const CATEGORY: ReadinessCategory = "design-quality";

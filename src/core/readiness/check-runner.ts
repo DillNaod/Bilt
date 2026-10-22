@@ -26,6 +26,16 @@ import { extractRouteMap, hasRouteExtractor } from "./route-map.js";
 import { loadAcceptedRisks } from "./risk-acceptance.js";
 import { getGitScope, isFindingIntroducedByChange } from "../scoping/git-scope.js";
 import { MAX_FILE_SIZE } from "./cache.js";
+import type {
+  CheckRunnerOptions,
+  CheckResult,
+  CategoryCheckResult,
+  RouteMapEntry,
+  CategoryChecker,
+  CheckContext,
+} from "./types.js";
+
+export * from "./types.js";
 
 // Checkers
 import { secretsAndEnvChecker } from "./checks/secrets-and-env.js";
@@ -43,54 +53,6 @@ import { paymentsChecker } from "./checks/payments.js";
 import { privacyAndPiiChecker } from "./checks/privacy-and-pii.js";
 import { monitoringRollbackChecker } from "./checks/monitoring-rollback.js";
 import { designQualityChecker } from "./checks/design-quality.js";
-
-export interface CheckRunnerOptions {
-  dir: string;
-  changed?: boolean;
-  base?: string;
-  format?: "human" | "agent";
-  categories?: ReadinessCategory[];
-}
-
-export interface CheckResult {
-  gate: GateResult;
-  findings: BiltCheckFinding[];
-  categoryResults: Map<ReadinessCategory, CategoryCheckResult>;
-  routeMap: RouteMapEntry[];
-  unsupportedStackCategories: ReadinessCategory[];
-  duration: number;
-}
-
-export interface CategoryCheckResult {
-  category: ReadinessCategory;
-  status: CategoryStatus;
-  findings: BiltCheckFinding[];
-  mode: CheckMode;
-  enforcement: EnforcementLevel;
-  unsupportedStack?: boolean;
-}
-
-export interface RouteMapEntry {
-  method: string;
-  path: string;
-  file: string;
-  line: number;
-  resourceIdParam?: string;
-}
-
-export interface CategoryChecker {
-  category: ReadinessCategory;
-  mode: CheckMode;
-  run(context: CheckContext): Promise<BiltCheckFinding[]>;
-}
-
-export interface CheckContext {
-  rootDir: string;
-  files: Array<{ path: string; content: string }>;
-  routeMap: RouteMapEntry[];
-  ecosystem: any;
-  changedFiles?: string[];
-}
 
 // Registry containing all 14 checkers
 const CHECKERS: CategoryChecker[] = [
