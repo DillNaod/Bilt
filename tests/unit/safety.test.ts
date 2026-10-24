@@ -54,6 +54,28 @@ describe("Safety & Prompt-Injection Resistance", () => {
     expect(scrubbed).toContain("sk-l*** [len");
   });
 
+  it("should redact secrets from agent untrusted snippets", () => {
+    const fakeFinding: ScanFinding = {
+      id: "secret-snippet-1",
+      ruleId: "SECRET-001",
+      severity: "critical",
+      category: "secret-detected",
+      message: "Secret detected",
+      file: "src/config.ts",
+      line: 1,
+    };
+
+    const agentFinding = toAgentFinding(fakeFinding, {
+      untrustedSnippet:
+        'const key = "ghp_1234567890abcdef1234567890abcdef";',
+    });
+
+    expect(agentFinding.untrusted_snippet).not.toContain(
+      "ghp_1234567890abcdef1234567890abcdef",
+    );
+    expect(agentFinding.untrusted_snippet).toContain("ghp_***");
+  });
+
   it("should resist prompt injection from hostile fixture files", async () => {
     const fixturePath = path.resolve(
       "tests/fixtures/hostile/prompt-injection.ts",

@@ -440,6 +440,24 @@ bilt doctor
 bilt doctor --card
 ```
 
+### Environment configuration
+
+The repository's [`.env.example`](./.env.example) contains safe local defaults and variable names only. Copy it to `.env` for development; never commit `.env` or replace placeholders with credentials in tracked files.
+
+| Variable | Required | Scope | Visibility |
+|---|---|---|---|
+| `PORT` | No | Local development | Public |
+| `NODE_ENV` | No | Development/test/runtime | Public |
+| `BILT_DEBUG` | No | Development diagnostics | Public |
+| `BILT_LOG_LEVEL` | No | Development diagnostics | Public |
+| `BILT_HOME` | No | Local development | Public path |
+| `BILT_SESSION_ID` | No | Agent/session harness | Session metadata |
+| `BILT_AGENT_NAME` | No | Agent/session harness | Agent metadata |
+| `NO_COLOR` | No | Local terminal | Public |
+| `BILT_*_API_KEY` | No | AI provider integrations | **Secret; use the OS keyring or environment only** |
+
+The `BILT_*_API_KEY` variables are read only for the corresponding configured AI provider and are intentionally omitted from `.env.example`. They must never be written to reports, logs, snapshots, JSON output, Markdown output, or agent prompts. The agent/session variables identify a local supervisory process and are not credentials.
+
 ### `report` — CI/CD Export & Documentation Generator
 
 Exports structured security findings into Markdown or JSON reports.

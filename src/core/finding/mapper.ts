@@ -2,6 +2,7 @@ import type { ScanFinding } from "../../types/index.js";
 import type { Finding, FindingSeverity } from "./types.js";
 import { computeFingerprint } from "./fingerprint.js";
 import { getRuleTemplate } from "./templates.js";
+import { redactKnownSecrets, sanitizeSnippet } from "../safety/sanitizer.js";
 
 export function toAgentFinding(
   finding: ScanFinding,
@@ -47,6 +48,8 @@ export function toAgentFinding(
     agent_action: template.agent_action,
     fixable: Boolean(finding.suggestion || finding.aiExplanation?.canBiltFix),
     introduced_by_change: options.introducedByChange,
-    untrusted_snippet: options.untrustedSnippet,
+    untrusted_snippet: options.untrustedSnippet
+      ? redactKnownSecrets(sanitizeSnippet(options.untrustedSnippet))
+      : undefined,
   };
 }

@@ -5,6 +5,7 @@ import { executeScan } from "./scan.js";
 import { redactForAI } from "../core/ai/redact.js";
 import { getAIConfig } from "../core/ai/config.js";
 import { executeAICompletion } from "../core/ai/runtime.js";
+import { redactKnownSecrets } from "../core/safety/sanitizer.js";
 import { colors, sectionHeader, divider, text } from "../ui/theme.js";
 
 export async function executeAsk(
@@ -49,20 +50,24 @@ export async function executeAsk(
   console.log(text.dim("Querying AI providers with failover..."));
 
   try {
-    const result = await executeAICompletion(question, redactedContext, {
-      timeoutMs: 8000,
-      totalBudgetMs: 10000,
-    });
+    const result = await executeAICompletion(
+      redactKnownSecrets(question),
+      redactedContext,
+      {
+        timeoutMs: 8000,
+        totalBudgetMs: 10000,
+      },
+    );
 
     console.log(sectionHeader(`Bilt AI Answer (${result.providerName})`));
-    console.log(result.content);
+    console.log(redactKnownSecrets(result.content));
     if (result.fellBack) {
       console.log(text.dim(`(Fallback used from configured provider '${config.activeProvider}' to '${result.providerId}')`));
     }
     console.log(divider());
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.log(colors.pulseCoral.apply(`🔴 AI Query Failed: ${message}`));
+    console.log(colors.pulseCoral.apply(`🔴 AI Query Failed: ${redactKnownSecrets(message)}`));
     console.log(text.dim("Bilt continued locally. Run 'bilt ai provider local' to force deterministic offline mode."));
   }
 }
