@@ -59,7 +59,7 @@ export function buildCallGraph(repo: RepoIndex, _ctx?: ExtractCtx): CallGraph {
     const content = file.bytes.toString("utf8");
 
     // Scan function definitions
-    const fnRegex = /(?:async\s+)?function\s+([a-zA-Z0-9_]+)\s*\(([^)]*)\)\s*\{([\s\S]*?)\n\}/g;
+    const fnRegex = /(?:async\s+)?function\s+([a-zA-Z0-9_]+)\s*\(([^)]*)\)\s*\{([\s\S]*?)\n\s*\}/g;
     let fnMatch: RegExpExecArray | null;
 
     while ((fnMatch = fnRegex.exec(content)) !== null) {
@@ -69,15 +69,15 @@ export function buildCallGraph(repo: RepoIndex, _ctx?: ExtractCtx): CallGraph {
       const fromSym: SymbolRef = { file: file.path, name: fnName, kind: "function", line: fnLine };
 
       // Find call expressions inside function body: fnCall(arg1, arg2)
-      const callRegex = /([a-zA-Z0-9_.]+)\s*\(([^)]*)\)/g;
-      let callMatch: RegExpExecArray | null;
+      const callRegex = /([a-zA-Z0-9_.[\]]+)\s*\(([^)]*)\)/g;
+      let cMatch: RegExpExecArray | null;
 
-      while ((callMatch = callRegex.exec(fnBody)) !== null) {
-        const callee = callMatch[1]!;
-        const rawArgs = callMatch[2]!;
+      while ((cMatch = callRegex.exec(fnBody)) !== null) {
+        const callee = cMatch[1]!;
+        const rawArgs = cMatch[2]!;
         if (callee === "if" || callee === "for" || callee === "while" || callee === "catch") continue;
 
-        const callOffset = fnMatch.index + fnMatch[0]!.indexOf(callMatch[0]!);
+        const callOffset = fnMatch.index + fnMatch[0]!.indexOf(cMatch[0]!);
         const callLine = content.slice(0, callOffset).split("\n").length;
         const at: Provenance = { file: file.path, startLine: callLine, endLine: callLine };
 
