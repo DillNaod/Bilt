@@ -1,127 +1,39 @@
-// ─── Scan Command ────────────────────────────────────────────────────────────
-// Orchestrates all domain scanning passes and produces a unified ScanResult.
+// ─── Scan Command Orchestrator ──────────────────────────────────────────────
+// Coordinates all domain scanning passes and produces a unified ScanResult.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import path from "node:path";
-import { promises as fs } from "node:fs";
-import fg from "fast-glob";
 import type {
   ScanResult,
   ScanFinding,
   ScanOptions,
   FrameworkInfo,
-  Severity,
 } from "../types/index.js";
 import { loadConfig } from "../config/config.js";
 import { detectEcosystem } from "../core/ecosystem/detector.js";
-import { generateAIExplanation } from "../core/ai/explainer.js";
-import { performEnvScan, findEnvFiles } from "../core/scan/env.js";
-import {
-  checkEnvFilesIgnoredWithGit,
-  checkCommonDirsIgnored,
-} from "../core/scan/gitignore.js";
-import { scanFileForSecrets, scanGitHistory } from "../core/scan/secrets.js";
-import { scanGitRepository } from "../core/scan/git.js";
-import { scanDependencies } from "../core/scan/dependencies.js";
-import { scanConfigurations } from "../core/scan/config.js";
-import { scanPerformance } from "../core/scan/performance.js";
-import { performApiScan } from "../core/api-scan/index.js";
-import { calculateHealthScore } from "../core/score/health.js";
-import { loadPlugins } from "../plugins/loader.js";
-import { createPluginContext } from "../plugins/interface.js";
-import { SECRET_RULES } from "../core/rules/secret-rules.js";
-import { SecurityRuleEngine } from "../core/security-engine/rule-engine.js";
-import type { SecurityFindingDetails } from "../core/security-engine/types.js";
-import {
-  colors,
-  glyphs,
-  Spinner,
-  showBliptBanner,
-  isPlainMode,
-} from "../ui/theme.js";
-import { formatFinding } from "../ui/format.js";
-import { VERIFIERS } from "../core/scan/verifiers/index.js";
-import {
-  getGitScope,
-  isFindingIntroducedByChange,
-} from "../core/scoping/git-scope.js";
-import {
-  loadBaseline,
-  isFingerprintInBaseline,
-} from "../core/scoping/baseline.js";
-import { computeFingerprint } from "../core/finding/fingerprint.js";
+import { showBliptBanner } from "../ui/theme.js";
 import { validateProjectDirectory } from "../core/safety/index.js";
 import { VERSION } from "../version.js";
+import { runScanStep } from "./scan/runner.js";
+import {
+  type ScanStepContext,
+  runGitAndEnvStep,
+  runEnvVariablesStep,
+  runSecretsStep,
+  runSecurityRulesStep,
+  runApiSecurityStep,
+  runDependenciesStep,
+  runConfigStep,
+  runPerformanceStep,
+  runPluginsStep,
+} from "./scan/steps/index.js";
+import { enrichScanFindings, buildScanResult } from "./scan/enricher.js";
 import { reportScanResult } from "./scan/reporter.js";
 
-// Helper to run a scan step and stream findings
-async function runScanStep(
-  name: string,
-  spinnerQuiet: boolean,
-  action: () => Promise<ScanFinding[]>,
-  detailsEnabled: boolean,
-  isSilent: boolean = false,
-  isQuiet: boolean = false,
-): Promise<ScanFinding[]> {
-  const spinner = spinnerQuiet || isSilent ? null : new Spinner(name).start();
-  let stepFindings: ScanFinding[] = [];
-  try {
-    stepFindings = await action();
-  } finally {
-    if (spinner) {
-      spinner.stop();
-    }
-  }
-
-  if (!isSilent && stepFindings.length > 0) {
-    const isPlain = isPlainMode();
-    const mode = isQuiet
-      ? detailsEnabled && !isPlain
-        ? "headline"
-        : "headline"
-      : detailsEnabled || isPlain
-        ? "detail"
-        : "headline";
-
-    for (const f of stepFindings) {
-      console.log(formatFinding(f, mode));
-      if (!isPlain && !isQuiet) {
-        await new Promise((resolve) => setTimeout(resolve, 60));
-      }
-      console.log("");
-    }
-  }
-
-  return stepFindings;
-}
-
-function applyOverridesAndFilter(
-  findings: ScanFinding[],
-  config: any,
-  minSeverity?: Severity,
-): ScanFinding[] {
-  for (const finding of findings) {
-    if (finding.ruleId) {
-      const override = config.severityOverrides[finding.ruleId];
-      if (override) {
-        finding.severity = override;
-      }
-    }
-  }
-
-  if (minSeverity) {
-    const severityOrder: Record<Severity, number> = {
-      critical: 0,
-      warning: 1,
-      info: 2,
-      passed: 3,
-    };
-    const minLevel = severityOrder[minSeverity];
-    return findings.filter((f) => severityOrder[f.severity] <= minLevel);
-  }
-
-  return findings;
-}
+export * from "./scan/runner.js";
+export * from "./scan/filter.js";
+export * from "./scan/steps/index.js";
+export * from "./scan/enricher.js";
+export * from "./scan/reporter.js";
 
 /**
  * Execute a full project scan across all 6 health domains.
@@ -130,7 +42,7 @@ export async function executeScan(
   projectDir: string,
   options: ScanOptions = {},
 ): Promise<ScanResult> {
-  const start = Date.now();
+  const startTime = Date.now();
   const rootDir = await validateProjectDirectory(projectDir);
   const config = await loadConfig(rootDir);
   const findings: ScanFinding[] = [];
@@ -174,374 +86,90 @@ export async function executeScan(
         }
       : undefined;
 
+  const stepContext: ScanStepContext = {
+    rootDir,
+    config,
+    options,
+    detectedFramework,
+  };
+
   try {
     // 1. Environment & Gitignore Step
-    const gitignoreStepFindings = await runStep(
+    const gitEnvFindings = await runStep(
       "Checking Git & Environment hygiene",
-      async () => {
-        const envFiles = await findEnvFiles(rootDir);
-        const stepFindings = await checkEnvFilesIgnoredWithGit(
-          rootDir,
-          envFiles,
-        );
-        const commonDirsFindings = await checkCommonDirsIgnored(rootDir);
-        stepFindings.push(...commonDirsFindings);
-
-        const gitRepoFindings = await scanGitRepository(rootDir, {
-          historyDepth: config.historyDepth,
-        });
-        stepFindings.push(...gitRepoFindings);
-
-        return applyOverridesAndFilter(
-          stepFindings,
-          config,
-          options.severity as Severity,
-        );
-      },
+      () => runGitAndEnvStep(stepContext),
     );
-    findings.push(...gitignoreStepFindings);
+    findings.push(...gitEnvFindings);
 
     // 2. Environment Variables Step
-    const envStepFindings = await runStep(
+    const envFindings = await runStep(
       "Checking environment variable usage",
-      async () => {
-        return await performEnvScan(rootDir, config, {
-          severity: options.severity,
-          debug: options.debug,
-        });
-      },
+      () => runEnvVariablesStep(stepContext),
     );
-    findings.push(...envStepFindings);
+    findings.push(...envFindings);
 
     // 3. Secret Intelligence & Credentials Step
-    const secretsStepFindings = await runStep(
+    const secretsResult = await runStep(
       "Scanning code & history for secrets",
       async () => {
-        const stepFindings: ScanFinding[] = [];
-        const scanTargets = await fg(["**/*"], {
-          cwd: rootDir,
-          ignore: config.ignore,
-          onlyFiles: true,
-        });
-
-        const textExtensions = new Set([
-          ".ts",
-          ".js",
-          ".tsx",
-          ".jsx",
-          ".mjs",
-          ".cjs",
-          ".py",
-          ".rb",
-          ".go",
-          ".rs",
-          ".java",
-          ".kt",
-          ".json",
-          ".yaml",
-          ".yml",
-          ".toml",
-          ".xml",
-          ".env",
-          ".cfg",
-          ".conf",
-          ".ini",
-          ".properties",
-          ".sh",
-          ".bash",
-          ".zsh",
-          ".fish",
-          ".tf",
-          ".hcl",
-          ".dockerfile",
-          ".md",
-          ".txt",
-          ".csv",
-        ]);
-
-        for (const file of scanTargets) {
-          const ext = path.extname(file).toLowerCase();
-          const basename = path.basename(file).toLowerCase();
-
-          const isEnvFile = basename.startsWith(".env");
-          if (!isEnvFile && !textExtensions.has(ext) && ext !== "") continue;
-
-          const fullPath = path.join(rootDir, file);
-          try {
-            const stat = await fs.stat(fullPath);
-            if (stat.size > 1_048_576) continue;
-
-            const content = await fs.readFile(fullPath, "utf-8");
-            const secretFindings = scanFileForSecrets(
-              content,
-              file,
-              SECRET_RULES,
-              {
-                entropyThreshold: config.entropyThreshold,
-                includeTests: options.includeTests,
-              },
-            );
-            stepFindings.push(...secretFindings);
-            scannedFiles++;
-          } catch {
-            // Skip
-          }
-        }
-
-        try {
-          const depth = options.fullHistory ? undefined : config.historyDepth;
-          const historyFindings = await scanGitHistory(
-            rootDir,
-            SECRET_RULES,
-            config.entropyThreshold,
-            depth,
-          );
-          stepFindings.push(...historyFindings);
-        } catch {
-          // Skip
-        }
-
-        // Credential liveness verification
-        for (const finding of stepFindings) {
-          if (finding.category === "secret-detected" && finding.secret) {
-            if (options.noVerify) {
-              finding.verificationState = "unverified";
-            } else {
-              const providerName = finding.provider?.name;
-              if (providerName && VERIFIERS[providerName]) {
-                try {
-                  const state = await VERIFIERS[providerName](finding.secret);
-                  finding.verificationState = state;
-                  if (state === "verified-live") {
-                    finding.confidence = "high";
-                  }
-                } catch {
-                  finding.verificationState = "unverified";
-                }
-              } else {
-                finding.verificationState = "unverified";
-              }
-            }
-            if (!options.retainSecrets) {
-              delete finding.secret;
-            }
-          }
-        }
-
-        return applyOverridesAndFilter(
-          stepFindings,
-          config,
-          options.severity as Severity,
-        );
+        const result = await runSecretsStep(stepContext);
+        scannedFiles += result.scannedFiles;
+        return result.findings;
       },
     );
-    findings.push(...secretsStepFindings);
+    findings.push(...secretsResult);
 
-    // 3.5. Security Rule Engine Step (Deterministic Anti-Patterns)
-    const securityEngineStepFindings = await runStep(
+    // 4. Security Rule Engine Step (Deterministic Anti-Patterns)
+    const secRuleFindings = await runStep(
       "Auditing deterministic security anti-patterns",
-      async () => {
-        const stepFindings: ScanFinding[] = [];
-        const ruleEngine = new SecurityRuleEngine();
-        const scanTargets = await fg(
-          ["**/*.{ts,js,tsx,jsx,json,yml,yaml,md,env*,Dockerfile}"],
-          {
-            cwd: rootDir,
-            ignore: config.ignore,
-            onlyFiles: true,
-          },
-        );
-
-        const filePayloads: Array<{ path: string; content: string }> = [];
-        for (const relPath of scanTargets) {
-          const fullPath = path.join(rootDir, relPath);
-          try {
-            const stat = await fs.stat(fullPath);
-            if (stat.size > 1_048_576) continue;
-            const content = await fs.readFile(fullPath, "utf-8");
-            filePayloads.push({ path: relPath, content });
-          } catch {
-            // Skip unreadable files
-          }
-        }
-
-        const engineFindings = ruleEngine.analyzeProject(
-          filePayloads,
-          detectedFramework ? [detectedFramework.name] : [],
-        );
-
-        engineFindings.forEach((ef: SecurityFindingDetails) => {
-          stepFindings.push({
-            id: `sec-rule-${ef.ruleId.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-            severity: ef.severity,
-            category: "framework-warning",
-            message: `[${ef.ruleId}] ${ef.title}: ${ef.message}`,
-            file: ef.evidence.file,
-            line: ef.evidence.line,
-            column: ef.evidence.column,
-            suggestion: ef.suggestedFix,
-            ruleId: ef.ruleId,
-            confidence: ef.confidence,
-            aiExplanation: {
-              whatIsIt: `${ef.title}. ${ef.whyThisIsDangerous}`,
-              whyIsItAProblem: ef.whyThisIsDangerous,
-              howSerious: `${ef.severity.toUpperCase()} (${ef.confidence} confidence evidence)`,
-              canItBeExploited: ef.howAttackersAbuseIt,
-              howToFix: ef.suggestedFix,
-              canBiltFix: ef.automaticFixAvailability.available,
-            },
-          });
-        });
-
-        return applyOverridesAndFilter(
-          stepFindings,
-          config,
-          options.severity as Severity,
-        );
-      },
+      () => runSecurityRulesStep(stepContext),
     );
-    findings.push(...securityEngineStepFindings);
+    findings.push(...secRuleFindings);
 
-    // 3.6. API Security Scan Step (Static Local Analysis)
-    const apiScanStepFindings = await runStep(
+    // 5. API Security Scan Step (Static Local Analysis)
+    const apiFindings = await runStep(
       "Auditing local API routes & spec files",
-      async () => {
-        const { findings: apiFindings } = await performApiScan(rootDir);
-        return applyOverridesAndFilter(
-          apiFindings,
-          config,
-          options.severity as Severity,
-        );
-      },
+      () => runApiSecurityStep(stepContext),
     );
-    findings.push(...apiScanStepFindings);
+    findings.push(...apiFindings);
 
-    const depStepFindings = await runStep(
+    // 6. Dependencies & Lockfiles Step
+    const depFindings = await runStep(
       "Auditing dependencies & lockfiles",
-      async () => {
-        const stepFindings = await scanDependencies(rootDir, config);
-        return applyOverridesAndFilter(
-          stepFindings,
-          config,
-          options.severity as Severity,
-        );
-      },
+      () => runDependenciesStep(stepContext),
     );
-    findings.push(...depStepFindings);
+    findings.push(...depFindings);
 
-    // 5. Configuration Intelligence Step
-    const configStepFindings = await runStep(
+    // 7. Configuration Intelligence Step
+    const configFindings = await runStep(
       "Auditing tool & deployment configurations",
-      async () => {
-        const stepFindings = await scanConfigurations(rootDir);
-        return applyOverridesAndFilter(
-          stepFindings,
-          config,
-          options.severity as Severity,
-        );
-      },
+      () => runConfigStep(stepContext),
     );
-    findings.push(...configStepFindings);
+    findings.push(...configFindings);
 
-    // 6. Performance Insights Step
-    const perfStepFindings = await runStep(
+    // 8. Performance Insights Step
+    const perfFindings = await runStep(
       "Analyzing performance & bundle health",
-      async () => {
-        const stepFindings = await scanPerformance(rootDir);
-        return applyOverridesAndFilter(
-          stepFindings,
-          config,
-          options.severity as Severity,
-        );
-      },
+      () => runPerformanceStep(stepContext),
     );
-    findings.push(...perfStepFindings);
+    findings.push(...perfFindings);
 
-    // 7. Plugin Execution Step
-    const pluginsStepFindings = await runStep(
+    // 9. Plugin Execution Step
+    const pluginFindings = await runStep(
       "Running third-party plugins",
-      async () => {
-        const stepFindings: ScanFinding[] = [];
-        try {
-          const plugins = await loadPlugins(config, rootDir);
-          if (plugins.length > 0) {
-            const pluginContext = await createPluginContext(rootDir, config);
-            for (const plugin of plugins) {
-              try {
-                const result = await plugin.check(pluginContext);
-                stepFindings.push(...result.findings);
-              } catch {
-                // Skip
-              }
-            }
-          }
-        } catch {
-          // Skip
-        }
-        return applyOverridesAndFilter(
-          stepFindings,
-          config,
-          options.severity as Severity,
-        );
-      },
+      () => runPluginsStep(stepContext),
     );
-    findings.push(...pluginsStepFindings);
+    findings.push(...pluginFindings);
 
-    // Resolve git scope and baseline
-    const scope = await getGitScope(rootDir, {
-      changed: options.changed,
-      base: options.base,
-    });
-    const baseline = await loadBaseline(rootDir);
+    // Resolve git scope, baseline, and enrich findings
+    await enrichScanFindings(findings, rootDir, options);
 
-    // Enriched findings with structured AI explanations, fingerprints, and scope tagging
-    for (const f of findings) {
-      if (!f.fingerprint) {
-        f.fingerprint = computeFingerprint({
-          ruleId: f.ruleId || f.category,
-          file: f.file,
-          snippet: f.preview,
-        });
-      }
-      const introducedByGit = isFindingIntroducedByChange(
-        f.file,
-        f.line || 1,
-        scope,
-      );
-      const inBaseline = isFingerprintInBaseline(f.fingerprint, baseline);
-      f.introducedByChange = introducedByGit && !inBaseline;
-
-      if (!f.aiExplanation) {
-        f.aiExplanation = generateAIExplanation(f);
-      }
-    }
-
-    // Sort live findings first
-    findings.sort((a, b) => {
-      const aLive =
-        a.category === "secret-detected" &&
-        a.verificationState === "verified-live";
-      const bLive =
-        b.category === "secret-detected" &&
-        b.verificationState === "verified-live";
-      if (aLive && !bLive) return -1;
-      if (!aLive && bLive) return 1;
-      return 0;
-    });
-
-    const { score, domainScores, grade } = calculateHealthScore(findings);
-    const duration = Date.now() - start;
-
-    const result: ScanResult = {
-      findings: findings.filter((f) => f.severity !== "passed"),
-      healthScore: score,
-      domainScores,
-      grade,
-      timestamp: new Date(),
+    const result = buildScanResult(
+      findings,
       scannedFiles,
-      framework: detectedFramework,
-      duration,
-    };
+      detectedFramework,
+      startTime,
+    );
 
     await reportScanResult({
       result,
