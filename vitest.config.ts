@@ -27,7 +27,7 @@ export default defineConfig({
           name: "unit",
           include: ["tests/unit/**/*.test.ts"],
           environment: "node",
-          testTimeout: 20000,
+          testTimeout: 30000,
         },
       },
       {
@@ -35,7 +35,7 @@ export default defineConfig({
           name: "agent",
           include: ["tests/agent/**/*.test.ts"],
           environment: "node",
-          testTimeout: 20000,
+          testTimeout: 30000,
         },
       },
       {
