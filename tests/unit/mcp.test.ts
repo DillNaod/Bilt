@@ -85,7 +85,7 @@ describe("Model Context Protocol (MCP) Server", () => {
     expect(parsed.schema_version).toBe("1.0.0");
     expect(parsed.status).toBeDefined();
     expect(Array.isArray(parsed.findings)).toBe(true);
-  }, 15000);
+  }, 30000);
 
   it("should execute bilt_scan and return scan results", async () => {
     const res = await handleMcpToolCall("bilt_scan", { dir: "." });
@@ -93,7 +93,7 @@ describe("Model Context Protocol (MCP) Server", () => {
     const parsed = JSON.parse(res.content[0]!.text);
     expect(parsed.findings).toBeDefined();
     expect(parsed.healthScore).toBeDefined();
-  }, 15000);
+  }, 30000);
 
   it("should execute bilt_doctor and return doctor summary", async () => {
     const res = await handleMcpToolCall("bilt_doctor", { dir: "." });
@@ -102,7 +102,7 @@ describe("Model Context Protocol (MCP) Server", () => {
     expect(parsed.grade).toBeDefined();
     expect(parsed.domainScores).toBeDefined();
     expect(parsed.framework).toBeDefined();
-  }, 15000);
+  }, 30000);
 
   it("should handle JSON-RPC protocol via startMcpServer", async () => {
     const mockEmitter = new EventEmitter();

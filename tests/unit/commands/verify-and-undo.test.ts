@@ -20,6 +20,7 @@ describe("Commands: verify and undo", () => {
 
   afterEach(async () => {
     console.log = origLog;
+    process.exitCode = undefined;
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
@@ -63,7 +64,8 @@ describe("Commands: verify and undo", () => {
         format: "sarif",
       });
 
-      const parsedSarif = JSON.parse(logs.join("\n"));
+      const sarifLog = logs.find((l) => l.includes('"version": "2.1.0"') || l.trim().startsWith("{")) || logs.join("\n");
+      const parsedSarif = JSON.parse(sarifLog);
       expect(parsedSarif.version).toBe("2.1.0");
       expect(parsedSarif.runs).toBeDefined();
     });

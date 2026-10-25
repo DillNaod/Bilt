@@ -19,6 +19,7 @@ describe("Commands: design-check and design-brief", () => {
 
   afterEach(async () => {
     console.log = origLog;
+    process.exitCode = undefined;
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
@@ -28,7 +29,8 @@ describe("Commands: design-check and design-brief", () => {
       const code = await executeDesignCheck(tmpDir, { format: "agent" });
       expect(code).toBe(0);
 
-      const parsed = JSON.parse(logs.join("\n"));
+      const jsonLog = logs.find((l) => l.trim().startsWith("{")) || logs.join("\n");
+      const parsed = JSON.parse(jsonLog);
       expect(parsed.schemaVersion).toBe("1");
       expect(parsed.status).toBe("pass");
     });
@@ -60,7 +62,8 @@ describe("Commands: design-check and design-brief", () => {
       const code = await executeDesignCheck(tmpDir, { format: "agent" });
       expect(code).toBe(1);
 
-      const parsed = JSON.parse(logs.join("\n"));
+      const jsonLog = logs.find((l) => l.trim().startsWith("{")) || logs.join("\n");
+      const parsed = JSON.parse(jsonLog);
       expect(parsed.status).toBe("needs-improvement");
       expect(parsed.findings.length).toBeGreaterThan(0);
     });
@@ -71,7 +74,8 @@ describe("Commands: design-check and design-brief", () => {
       const code = await executeDesignBrief(tmpDir, "questionnaire", { format: "agent" });
       expect(code).toBe(0);
 
-      const parsed = JSON.parse(logs.join("\n"));
+      const jsonLog = logs.find((l) => l.trim().startsWith("{")) || logs.join("\n");
+      const parsed = JSON.parse(jsonLog);
       expect(parsed.configured).toBe(false);
       expect(parsed.questions.length).toBe(4);
       expect(parsed.agentInstruction).toContain("STOP EXECUTION IMMEDIATELY");

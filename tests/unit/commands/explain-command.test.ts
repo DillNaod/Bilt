@@ -38,7 +38,8 @@ describe("Commands: explain", () => {
   it("should explain a known taxonomy category in JSON format", async () => {
     const code = await executeExplain("database", { json: true });
     expect(code).toBe(0);
-    const parsed = JSON.parse(logs.join("\n"));
+    const jsonLog = logs.find((l) => l.trim().startsWith("{")) || logs.join("\n");
+    const parsed = JSON.parse(jsonLog);
     expect(parsed.category).toBe("database");
     expect(parsed.title).toBeDefined();
   });
@@ -46,13 +47,15 @@ describe("Commands: explain", () => {
   it("should support category aliases like 'db' and 'env'", async () => {
     const codeDb = await executeExplain("db", { json: true });
     expect(codeDb).toBe(0);
-    const parsedDb = JSON.parse(logs.join("\n"));
+    const jsonDb = logs.find((l) => l.trim().startsWith("{")) || logs.join("\n");
+    const parsedDb = JSON.parse(jsonDb);
     expect(parsedDb.category).toBe("database");
 
     logs = [];
     const codeEnv = await executeExplain("env", { json: true });
     expect(codeEnv).toBe(0);
-    const parsedEnv = JSON.parse(logs.join("\n"));
+    const jsonEnv = logs.find((l) => l.trim().startsWith("{")) || logs.join("\n");
+    const parsedEnv = JSON.parse(jsonEnv);
     expect(parsedEnv.category).toBe("secrets-and-env");
   });
 

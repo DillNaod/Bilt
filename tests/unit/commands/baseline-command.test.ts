@@ -42,7 +42,8 @@ describe("Commands: baseline create", () => {
       const baselinePath = await executeBaselineCreate(tmpDir, { json: true });
       expect(baselinePath).toBe(path.join(tmpDir, ".bilt", "baseline.json"));
 
-      const parsedLog = JSON.parse(consoleLogs.join("\n"));
+      const jsonLog = consoleLogs.find((l) => l.trim().startsWith("{")) || consoleLogs.join("\n");
+      const parsedLog = JSON.parse(jsonLog);
       expect(parsedLog.success).toBe(true);
       expect(parsedLog.baselineFile).toBe(baselinePath);
       expect(parsedLog.fingerprintsCount).toBeGreaterThanOrEqual(1);

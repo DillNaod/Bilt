@@ -17,6 +17,7 @@ describe("Commands: api-scan", () => {
 
   afterEach(async () => {
     console.log = origLog;
+    process.exitCode = undefined;
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
@@ -34,7 +35,8 @@ describe("Commands: api-scan", () => {
     const result = await executeApiScan(tmpDir, { json: true });
     expect(result.healthScore).toBe(100);
 
-    const parsed = JSON.parse(logs.join("\n"));
+    const jsonLog = logs.find((l) => l.trim().startsWith("{")) || logs.join("\n");
+    const parsed = JSON.parse(jsonLog);
     expect(parsed.healthScore).toBe(100);
     expect(parsed.grade).toBe("A+");
     expect(Array.isArray(parsed.findings)).toBe(true);

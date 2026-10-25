@@ -41,29 +41,23 @@ describe("Agent Init & Prompt Integration", () => {
     });
 
     it("includes active design brief section when design brief is configured", async () => {
-      const origCwd = process.cwd();
-      try {
-        process.chdir(tempDir);
-        const { writeDesignBrief } = await import("../../src/core/design/brief/storage.js");
-        await writeDesignBrief(tempDir, {
-          schemaVersion: "1",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          purpose: { value: "Health portal", source: "developer" },
-          audience: { value: "Patients", source: "developer" },
-          visualDirection: { value: ["Minimal"], source: "developer" },
-          brandColors: { value: ["#0055ff"], source: "developer" },
-          desiredFeeling: { value: null, source: "creative-freedom" },
-          creativeFreedom: "balanced",
-        });
+      const { writeDesignBrief } = await import("../../src/core/design/brief/storage.js");
+      await writeDesignBrief(tempDir, {
+        schemaVersion: "1",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        purpose: { value: "Health portal", source: "developer" },
+        audience: { value: "Patients", source: "developer" },
+        visualDirection: { value: ["Minimal"], source: "developer" },
+        brandColors: { value: ["#0055ff"], source: "developer" },
+        desiredFeeling: { value: null, source: "creative-freedom" },
+        creativeFreedom: "balanced",
+      });
 
-        const output = await executePrompt();
-        expect(output).toContain("DESIGN BRIEF (ACTIVE DIRECTION)");
-        expect(output).toContain("Health portal");
-        expect(output).toContain("Surprise me (creative freedom)");
-      } finally {
-        process.chdir(origCwd);
-      }
+      const output = await executePrompt({ dir: tempDir });
+      expect(output).toContain("DESIGN BRIEF (ACTIVE DIRECTION)");
+      expect(output).toContain("Health portal");
+      expect(output).toContain("Surprise me (creative freedom)");
     });
   });
 

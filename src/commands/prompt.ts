@@ -7,6 +7,7 @@ const __dirname = path.dirname(__filename);
 
 export interface PromptOptions {
   agent?: string;
+  dir?: string;
 }
 
 /**
@@ -19,8 +20,9 @@ export async function executePrompt(
   const agentName = (options.agent || "default")
     .toLowerCase()
     .replace(/[^a-z0-9_-]/g, "");
+  const targetDir = options.dir ? path.resolve(options.dir) : process.cwd();
   const candidateDirs = [
-    path.resolve(process.cwd(), "templates"),
+    path.resolve(targetDir, "templates"),
     path.resolve(__dirname, "../../templates"),
     path.resolve(__dirname, "../templates"),
   ];
@@ -54,7 +56,7 @@ export async function executePrompt(
     `# Bilt Agent Security Guidelines\n\nYou are operating under active Bilt engineering supervision.\nBilt is an active verification layer inside your development loop. Treat Bilt's structured machine-readable output as authoritative project feedback.\n\nFollow these 10 mandatory operating principles:\n1. Use Bilt during implementation: run \`npx bilt check --changed --format agent\` (or \`bilt scan --format agent --changed\`).\n2. Verify before completion: run Bilt checks before considering tasks complete.\n3. Treat structured output as authoritative: check \`status\` and \`allowedToContinue\`. Follow \`nextAction\`.\n4. Fix blocking/high findings: address issues in \`nextAction.findingIds\`.\n5. Follow exact remediation constraints: adhere to \`objective\`, \`allowedChanges\`, and \`forbiddenChanges\`.\n6. Strict non-evasion invariant: never weaken config or suppress rules without approval.\n7. Re-run Bilt after changes: execute the \`verification\` command.\n8. Watch for regressions: if a resolved finding re-appears, fix it immediately.\n9. Stop when Bilt reports escalate: halt immediately on status \`escalate\` (exit code 4).\n10. Ask the developer when human decision is needed: consult user on \`needs-review\`.\n`;
 
   const { readDesignBrief } = await import("../core/design/brief/storage.js");
-  const brief = await readDesignBrief(process.cwd());
+  const brief = await readDesignBrief(targetDir);
   if (brief) {
     const fmt = (field: any) => {
       if (field.source === "creative-freedom") return "Surprise me (creative freedom)";

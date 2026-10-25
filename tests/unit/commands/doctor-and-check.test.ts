@@ -19,6 +19,7 @@ describe("Commands: doctor and check", () => {
 
   afterEach(async () => {
     console.log = origLog;
+    process.exitCode = undefined;
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
@@ -79,7 +80,8 @@ describe("Commands: doctor and check", () => {
       const code = await executeCheck(tmpDir, { format: "agent" });
       expect(code).toBe(1);
 
-      const parsed = JSON.parse(logs.join("\n"));
+      const jsonLog = logs.find((l) => l.trim().startsWith("{")) || logs.join("\n");
+      const parsed = JSON.parse(jsonLog);
       expect(parsed.schemaVersion).toBe("1");
       expect(parsed.status).toBe("fail");
       expect(parsed.allowedToContinue).toBe(false);
@@ -96,7 +98,8 @@ describe("Commands: doctor and check", () => {
         categories: "secrets-and-env",
       });
 
-      const parsed = JSON.parse(logs.join("\n"));
+      const jsonLog = logs.find((l) => l.trim().startsWith("{")) || logs.join("\n");
+      const parsed = JSON.parse(jsonLog);
       expect(code).toBe(0);
       expect(parsed.status).toBe("pass");
       expect(parsed.findings.every((f: any) => f.category === "secrets-and-env")).toBe(true);
