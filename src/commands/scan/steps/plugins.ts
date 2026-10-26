@@ -4,6 +4,7 @@ import type { ScanFinding, Severity } from "../../../types/index.js";
 import { loadPlugins } from "../../../plugins/loader.js";
 import { createPluginContext } from "../../../plugins/interface.js";
 import { applyOverridesAndFilter } from "../filter.js";
+import { logger } from "../../../core/logging/logger.js";
 import type { ScanStepContext } from "./context.js";
 
 export async function runPluginsStep(
@@ -18,13 +19,19 @@ export async function runPluginsStep(
         try {
           const result = await plugin.check(pluginContext);
           stepFindings.push(...result.findings);
-        } catch {
-          // Skip individual plugin check failures
+        } catch (pluginErr) {
+          logger.warn("Plugin check execution failed", {
+            plugin: plugin.name,
+            error: pluginErr instanceof Error ? pluginErr.message : String(pluginErr),
+          });
         }
       }
     }
-  } catch {
-    // Skip plugin loader failure
+  } catch (loaderErr) {
+    logger.warn("Plugin step loader failed", {
+      error: loaderErr instanceof Error ? loaderErr.message : String(loaderErr),
+      projectRoot: ctx.rootDir,
+    });
   }
   return applyOverridesAndFilter(
     stepFindings,

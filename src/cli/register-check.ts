@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { printError } from "./common.js";
+import { handleCommandError } from "./common.js";
 
 export function registerCheckCommands(program: Command): void {
   // ─── bilt check ─────────────────────────────────────────────────────────────
@@ -31,8 +31,7 @@ export function registerCheckCommands(program: Command): void {
           const exitCode = await executeCheck(dir, opts);
           process.exitCode = exitCode;
         } catch (error) {
-          printError(error);
-          process.exitCode = 3;
+          process.exitCode = handleCommandError(error, { defaultExitCode: 3, command: "check" });
         }
       },
     );
@@ -68,8 +67,7 @@ export function registerCheckCommands(program: Command): void {
           const exitCode = await executeRequirement(dir, subcommand, opts);
           process.exitCode = exitCode;
         } catch (error) {
-          printError(error);
-          process.exitCode = 2;
+          process.exitCode = handleCommandError(error, { defaultExitCode: 2, command: "requirement" });
         }
       },
     );
@@ -97,8 +95,7 @@ export function registerCheckCommands(program: Command): void {
           });
           process.exitCode = exitCode;
         } catch (error) {
-          printError(error);
-          process.exitCode = 2;
+          process.exitCode = handleCommandError(error, { defaultExitCode: 2, command: "requirement" });
         }
       },
     );
@@ -150,8 +147,7 @@ export function registerCheckCommands(program: Command): void {
           const exitCode = await executeAcceptRisk(findingIdArg, opts);
           process.exitCode = exitCode;
         } catch (error) {
-          printError(error);
-          process.exitCode = 2;
+          process.exitCode = handleCommandError(error, { defaultExitCode: 2, command: "requirement" });
         }
       },
     );
