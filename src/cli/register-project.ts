@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { executeDoctor } from "../commands/doctor.js";
 import { executeWelcome } from "../commands/welcome.js";
-import { printError } from "./common.js";
+import { handleCommandError } from "./common.js";
 
 export function registerProjectCommands(program: Command): void {
   // ─── bilt init ───────────────────────────────────────────────────────────────
@@ -36,8 +36,7 @@ export function registerProjectCommands(program: Command): void {
             force: opts.force,
           });
         } catch (error) {
-          printError(error);
-          process.exitCode = 2;
+          process.exitCode = handleCommandError(error, { defaultExitCode: 2, command: "init" });
         }
       },
     );
@@ -64,8 +63,7 @@ export function registerProjectCommands(program: Command): void {
             debug: opts.debug,
           });
         } catch (error) {
-          printError(error);
-          process.exitCode = 2;
+          process.exitCode = handleCommandError(error, { defaultExitCode: 2, command: "init" });
         }
       },
     );
@@ -80,8 +78,7 @@ export function registerProjectCommands(program: Command): void {
       try {
         await executeWelcome();
       } catch (error) {
-        printError(error);
-        process.exitCode = 2;
+        process.exitCode = handleCommandError(error, { defaultExitCode: 2, command: "welcome" });
       }
     });
 }

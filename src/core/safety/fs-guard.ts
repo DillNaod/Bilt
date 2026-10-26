@@ -1,26 +1,41 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { FilesystemError } from "../errors/domain.js";
 
 /**
  * Validates that a given target directory exists and is a directory.
  * Returns the resolved absolute path.
- * Throws a clean, user-friendly Error if not found or invalid.
+ * Throws a clean, user-friendly FilesystemError if not found or invalid.
  */
 export async function validateProjectDirectory(dir: string): Promise<string> {
   const resolved = path.resolve(dir);
   try {
     const stat = await fs.stat(resolved);
     if (!stat.isDirectory()) {
-      throw new Error(`Target path is not a directory: ${dir}`);
+      throw new FilesystemError(`Target path is not a directory: ${dir}`, {
+        code: "ERR_FS_NOT_A_DIRECTORY",
+        context: { path: dir, resolvedPath: resolved },
+      });
     }
   } catch (err: any) {
+    if (err instanceof FilesystemError) {
+      throw err;
+    }
     if (err.code === "ENOENT") {
-      throw new Error(`Directory not found: ${dir}`);
+      throw new FilesystemError(`Directory not found: ${dir}`, {
+        code: "ERR_FS_NOT_FOUND",
+        cause: err,
+        context: { path: dir, resolvedPath: resolved },
+      });
     }
     if (err.message && (err.message.includes("not a directory") || err.message.includes("Directory not found"))) {
       throw err;
     }
-    throw new Error(`Unable to access directory "${dir}": ${err.message || String(err)}`);
+    throw new FilesystemError(`Unable to access directory "${dir}": ${err.message || String(err)}`, {
+      code: "ERR_FS_ACCESS_DENIED",
+      cause: err,
+      context: { path: dir, resolvedPath: resolved },
+    });
   }
   return resolved;
 }

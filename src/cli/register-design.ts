@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { printError } from "./common.js";
+import { handleCommandError } from "./common.js";
 
 export function registerDesignCommands(program: Command): void {
   // ─── bilt design-check ──────────────────────────────────────────────────────
@@ -35,8 +35,7 @@ export function registerDesignCommands(program: Command): void {
           const exitCode = await executeDesignCheck(dir, opts);
           process.exitCode = exitCode;
         } catch (error) {
-          printError(error);
-          process.exitCode = 2;
+          process.exitCode = handleCommandError(error, { debug: opts.debug, defaultExitCode: 2, command: "design-check" });
         }
       },
     );
@@ -81,8 +80,7 @@ export function registerDesignCommands(program: Command): void {
           const exitCode = await executeDesignBrief(targetDir, actualSubcommand, opts);
           process.exitCode = exitCode;
         } catch (error) {
-          printError(error);
-          process.exitCode = 2;
+          process.exitCode = handleCommandError(error, { defaultExitCode: 2, command: "design-brief" });
         }
       },
     );
