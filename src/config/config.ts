@@ -1,5 +1,6 @@
 import { cosmiconfig } from "cosmiconfig";
 import type { BiltConfig } from "../types/index.js";
+import { logger } from "../core/logging/logger.js";
 
 // ─── Default Configuration (Zero-Config) ────────────────────────────────────
 
@@ -91,8 +92,11 @@ export async function loadConfig(searchFrom?: string): Promise<BiltConfig> {
       framework: userConfig.framework ?? DEFAULT_CONFIG.framework,
       designCheck: userConfig.designCheck ?? DEFAULT_CONFIG.designCheck,
     };
-  } catch {
-    // If config loading fails, silently use defaults (zero-config philosophy)
+  } catch (err) {
+    logger.warn("Failed to load user config file, using default configuration", {
+      projectRoot: searchFrom,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return { ...DEFAULT_CONFIG };
   }
 }
